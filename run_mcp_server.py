@@ -7,6 +7,7 @@ import uvicorn
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 
 # 添加src目录到Python路径
 src_path = Path(__file__).parent / "src"
@@ -75,13 +76,16 @@ def check_environment():
     print()
 
 if __name__ == "__main__":
+    # 加载环境变量
+    load_dotenv()
+    
     # 环境检查
     check_environment()
     
     # 配置参数
-    host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", "8000"))
-    debug = os.getenv("DEBUG", "false").lower() == "true"
+    host = os.getenv("MCP_SERVER_HOST", "localhost")
+    port = int(os.getenv("MCP_SERVER_PORT", "8000"))
+    debug = os.getenv("DEBUG_MODE", "false").lower() == "true"
     
     print(f"🚀 启动MCP测试设备管理系统...")
     print(f"📍 服务器地址: http://{host}:{port}")
