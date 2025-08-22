@@ -2,7 +2,7 @@
 MCP测试设备管理系统主应用
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,6 +10,8 @@ import uvicorn
 import os
 
 from .handlers.api import router as api_router
+from .mcp.server import MCPServer
+from .device.manager import DeviceManager
 
 # 创建FastAPI应用
 app = FastAPI(
@@ -30,8 +32,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 初始化MCP服务器
+device_manager = DeviceManager()
+mcp_server = MCPServer(device_manager)
+
 # 注册API路由
 app.include_router(api_router, prefix="/api", tags=["api"])
+
+# MCP协议WebSocket端点
+@app.websocket("/mcp")
+async def mcp_websocket(websocket: WebSocket):
+    """MCP协议WebSocket端点"""
+    await mcp_server.handle_websocket(websocket)
 
 # 根路径
 @app.get("/")
@@ -41,7 +53,8 @@ async def root():
         "message": "MCP测试设备管理系统",
         "version": "1.0.0",
         "docs": "/docs",
-        "health": "/api/health"
+        "health": "/api/health",
+        "mcp": "/mcp"
     }
 
 # 健康检查
