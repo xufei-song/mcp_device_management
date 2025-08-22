@@ -132,15 +132,25 @@ debug = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
 ### 调用流程
 ```
 Agent/Client → HTTP API → FastAPI → MCPProtocol → DeviceManager → 数据管理
+Agent/Client → WebSocket → MCPServer → MCPProtocol → DeviceManager → 数据管理
 ```
 
 **详细说明：**
 1. **Agent/Client**: 外部客户端或AI Agent发起请求
 2. **HTTP API**: FastAPI提供的REST接口
-3. **FastAPI**: Web框架，处理HTTP请求和响应
-4. **MCPProtocol**: MCP协议实现层，工具调用的核心逻辑
-5. **DeviceManager**: 设备管理器，处理设备数据的CRUD操作
-6. **数据管理**: 对设备JSON文件的读写和管理操作
+3. **WebSocket**: MCP协议的标准通信方式
+4. **FastAPI**: Web框架，处理HTTP请求和响应
+5. **MCPServer**: MCP协议服务器，处理WebSocket连接和MCP消息
+6. **MCPProtocol**: MCP协议实现层，工具调用的核心逻辑
+7. **DeviceManager**: 设备管理器，处理设备数据的CRUD操作
+8. **数据管理**: 对设备JSON文件的读写和管理操作
+
+### MCP协议支持
+系统现在支持完整的MCP协议：
+- **WebSocket端点**: `/mcp`
+- **标准MCP消息**: initialize, tools/list, tools/call, resources/list, resources/read
+- **实时通信**: 支持设备状态变化的事件广播
+- **双重接口**: 既支持HTTP API，也支持标准MCP协议
 
 ### 接口修改原则
 
