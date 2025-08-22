@@ -1,0 +1,51 @@
+# 忽略的文件和目录
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git/
+.mypy_cache/
+.pytest_cache/
+.hypothesis/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# 临时文件
+temp/
+tmp/
+logs/
+*.tmp
+
+# 配置文件中的敏感信息
+config/secrets.yaml
+config/credentials.json
+.env.local
+.env.production
+
+# 大型数据文件
+*.db
+*.sqlite
+*.sqlite3
+data/
+datasets/
+
+# 构建输出
+build/
+dist/
+*.egg-info/
