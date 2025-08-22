@@ -12,10 +12,10 @@ REM Create necessary directories
 if not exist "logs" mkdir logs 
 if not exist "data" mkdir data 
  
-echo 🚀 Starting MCP Test Device Management System development server... 
-echo 📍 Server address: http://localhost:8000 
-echo 📚 API documentation: http://localhost:8000/docs 
-echo 🔧 Press Ctrl+C to stop server 
+echo [START] Starting MCP Test Device Management System development server... 
+echo [INFO] Server address: http://localhost:8000 
+echo [INFO] API documentation: http://localhost:8000/docs 
+echo [INFO] Press Ctrl+C to stop server 
  
 REM Run development server 
 python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000 

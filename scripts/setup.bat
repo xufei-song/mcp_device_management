@@ -37,6 +37,10 @@ REM Install development dependencies
 echo [INFO] Installing development dependencies...
 pip install -e ".[dev]"
 
+REM Install additional required packages
+echo [INFO] Installing additional required packages...
+pip install python-dotenv
+
 REM Create necessary directories
 echo [INFO] Creating project directories...
 if not exist "src" mkdir src
