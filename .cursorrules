@@ -28,18 +28,18 @@ TestDeviceManagmentMCP/
 ```
 
 ## 核心设计原则
-1. **设备隔离**: 每个设备对应Devices目录下的独立文件夹
+1. **数据隔离**: 每个设备对应Devices目录下的独立文件夹
 2. **类型分类**: 按设备类型（Android/iOS/Windows）组织
 3. **MCP协议**: 实现标准的MCP资源管理和工具调用接口
-4. **实时监控**: 支持设备状态实时更新
+4. **数据管理**: 支持设备信息的增删改查和借用管理
 5. **可扩展性**: 易于添加新的设备类型和功能
 
 ## 关键组件
 
 ### 设备管理器 (DeviceManager)
-- 负责设备的发现、注册和管理
-- 维护设备状态信息
-- 提供设备操作接口
+- 负责设备数据的增删改查
+- 维护设备状态和借用信息
+- 提供设备数据管理接口
 
 ### MCP服务器 (MCPServer)
 - 实现MCP协议规范
@@ -53,12 +53,12 @@ TestDeviceManagmentMCP/
 
 ## 开发优先级
 1. 基础MCP框架
-2. 设备管理器核心
-3. Android设备支持
-4. iOS设备支持
-5. Windows设备支持
-6. 实时监控功能
-7. Web管理界面
+2. 设备数据管理器核心
+3. 设备信息模型定义
+4. HTTP API接口实现
+5. MCP协议工具实现
+6. 数据验证和错误处理
+7. 测试和文档完善
 
 ## 技术栈
 - **后端**: Python + FastAPI
@@ -122,16 +122,16 @@ debug = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
 ```
 
 ## 注意事项
-- 所有设备操作要有错误处理
-- 支持并发设备操作
-- 实现设备状态缓存
+- 所有数据操作要有错误处理
+- 支持并发数据访问
+- 实现数据验证和缓存
 - 提供详细的日志记录
 
 ## 系统架构和调用流程
 
 ### 调用流程
 ```
-Agent/Client → HTTP API → FastAPI → MCPProtocol → DeviceManager → 设备操作
+Agent/Client → HTTP API → FastAPI → MCPProtocol → DeviceManager → 数据管理
 ```
 
 **详细说明：**
@@ -139,8 +139,8 @@ Agent/Client → HTTP API → FastAPI → MCPProtocol → DeviceManager → 设�
 2. **HTTP API**: FastAPI提供的REST接口
 3. **FastAPI**: Web框架，处理HTTP请求和响应
 4. **MCPProtocol**: MCP协议实现层，工具调用的核心逻辑
-5. **DeviceManager**: 设备管理器，处理具体的设备操作
-6. **设备操作**: 对实际设备（Android/iOS/Windows）的操作
+5. **DeviceManager**: 设备管理器，处理设备数据的CRUD操作
+6. **数据管理**: 对设备JSON文件的读写和管理操作
 
 ### 接口修改原则
 
@@ -172,7 +172,7 @@ MCP协议层 (mcp/protocol.py)
     ↓
 数据模型层 (device/models.py)
     ↓
-设备操作层 (实际设备交互)
+数据存储层 (JSON文件管理)
 ```
 
 #### 4. 代码一致性检查
