@@ -143,13 +143,123 @@ python test_mcp_client.py
 - [快速开始指南](QUICKSTART.md) - 项目设置和使用说明
 - [开发指导](.cursorrules) - 详细的开发文档
 
+## 🤖 Agent连接配置
+
+### Claude Desktop配置
+
+在Claude Desktop中添加MCP服务器配置，编辑配置文件：
+
+**Windows路径**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "test-device-management": {
+      "command": "python",
+      "args": [
+        "run_mcp_server.py"
+      ],
+      "cwd": "D:\\work\\workspace\\TestDeviceManagmentMCP",
+      "env": {
+        "MCP_SERVER_HOST": "localhost",
+        "MCP_SERVER_PORT": "8000",
+        "DEBUG_MODE": "false"
+      }
+    }
+  }
+}
+```
+
+### Cursor/VS Code配置
+
+如果使用支持MCP的编辑器插件：
+
+```json
+{
+  "mcp.servers": [
+    {
+      "name": "test-device-management",
+      "command": "python",
+      "args": ["run_mcp_server.py"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "MCP_SERVER_HOST": "localhost",
+        "MCP_SERVER_PORT": "8000"
+      }
+    }
+  ]
+}
+```
+
+### 自定义Agent配置
+
+对于自定义的AI Agent，使用以下连接信息：
+
+```python
+# Python示例
+import websockets
+import json
+
+async def connect_to_mcp():
+    uri = "ws://localhost:8000/mcp"
+    async with websockets.connect(uri) as websocket:
+        # 初始化连接
+        init_msg = {
+            "id": "init_1",
+            "type": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {
+                    "name": "My Agent",
+                    "version": "1.0.0"
+                }
+            }
+        }
+        await websocket.send(json.dumps(init_msg))
+        response = await websocket.recv()
+        print(f"初始化响应: {response}")
+```
+
+### 配置参数说明
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `command` | 启动命令 | `python` |
+| `args` | 命令参数 | `["run_mcp_server.py"]` |
+| `cwd` | 工作目录 | 项目根目录路径 |
+| `MCP_SERVER_HOST` | 服务器地址 | `localhost` |
+| `MCP_SERVER_PORT` | 服务器端口 | `8000` |
+| `DEBUG_MODE` | 调试模式 | `false` |
+
+### 验证连接
+
+连接成功后，Agent可以使用以下MCP工具：
+
+- `device.list` - 列出所有设备
+- `device.info` - 获取设备详细信息
+- `device.borrow` - 借用设备
+- `device.return` - 归还设备
+- `device.create` - 创建设备记录
+- `device.update` - 更新设备信息
+- `device.delete` - 删除设备记录
+- `device.search` - 搜索设备
+
+### 常见Agent配置问题
+
+1. **路径问题**: 确保`cwd`指向正确的项目目录
+2. **Python环境**: 确保使用正确的Python环境（虚拟环境）
+3. **端口冲突**: 检查8000端口是否被占用
+4. **权限问题**: 确保Agent有执行Python脚本的权限
+
 ## 🎯 下一步
 
 1. 启动服务器并测试MCP协议
-2. 使用测试脚本验证功能
-3. 集成到您的AI Agent或MCP客户端
-4. 根据需要扩展更多MCP功能
+2. 配置您的Agent连接到MCP服务器
+3. 使用测试脚本验证功能
+4. 在Agent中测试设备管理功能
+5. 根据需要扩展更多MCP功能
 
 ---
 
-**注意**: 确保在运行MCP服务器之前已经完成了环境设置和依赖安装。
+**注意**: 确保在运行MCP服务器之前已经完成了环境设置和依赖安装。不同的Agent可能有不同的配置方式，请参考对应Agent的MCP集成文档。

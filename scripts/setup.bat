@@ -40,6 +40,16 @@ pip install -e ".[dev]"
 REM Install additional required packages
 echo [INFO] Installing additional required packages...
 pip install python-dotenv
+pip install psutil
+pip install websockets
+pip install pytest
+pip install pytest-cov
+pip install pytest-asyncio
+pip install httpx
+pip install aiofiles
+pip install pyyaml
+pip install jinja2
+pip install python-multipart
 
 REM Create necessary directories
 echo [INFO] Creating project directories...
@@ -141,6 +151,55 @@ echo. >> scripts\run_tests.bat
 echo echo [INFO] Running tests... >> scripts\run_tests.bat
 echo pytest tests\ -v --cov=src --cov-report=html --cov-report=term-missing >> scripts\run_tests.bat
 
+REM Create MCP server script
+echo [INFO] Creating MCP server script...
+echo @echo off > scripts\run_mcp_server.bat
+echo REM Activate virtual environment >> scripts\run_mcp_server.bat
+echo call venv\Scripts\activate.bat >> scripts\run_mcp_server.bat
+echo. >> scripts\run_mcp_server.bat
+echo REM Set environment variables >> scripts\run_mcp_server.bat
+echo set PYTHONPATH=%%PYTHONPATH%%;%cd% >> scripts\run_mcp_server.bat
+echo. >> scripts\run_mcp_server.bat
+echo echo [START] Starting MCP HTTP/WebSocket Server... >> scripts\run_mcp_server.bat
+echo echo [INFO] Server address: http://localhost:8000 >> scripts\run_mcp_server.bat
+echo echo [INFO] MCP WebSocket endpoint: ws://localhost:8000/mcp >> scripts\run_mcp_server.bat
+echo echo [INFO] Press Ctrl+C to stop server >> scripts\run_mcp_server.bat
+echo. >> scripts\run_mcp_server.bat
+echo REM Run MCP server >> scripts\run_mcp_server.bat
+echo python run_mcp_server.py >> scripts\run_mcp_server.bat
+
+REM Create MCP stdio server script
+echo [INFO] Creating MCP stdio server script...
+echo @echo off > scripts\run_mcp_stdio.bat
+echo REM Activate virtual environment >> scripts\run_mcp_stdio.bat
+echo call venv\Scripts\activate.bat >> scripts\run_mcp_stdio.bat
+echo. >> scripts\run_mcp_stdio.bat
+echo REM Set environment variables >> scripts\run_mcp_stdio.bat
+echo set PYTHONPATH=%%PYTHONPATH%%;%cd% >> scripts\run_mcp_stdio.bat
+echo. >> scripts\run_mcp_stdio.bat
+echo echo [START] Starting MCP stdio server for Cursor integration... >> scripts\run_mcp_stdio.bat
+echo echo [INFO] This server communicates via stdin/stdout >> scripts\run_mcp_stdio.bat
+echo echo [INFO] Press Ctrl+C to stop server >> scripts\run_mcp_stdio.bat
+echo. >> scripts\run_mcp_stdio.bat
+echo REM Run MCP stdio server >> scripts\run_mcp_stdio.bat
+echo python mcp_stdio_server.py >> scripts\run_mcp_stdio.bat
+
+REM Create monitoring script
+echo [INFO] Creating monitoring script...
+echo @echo off > scripts\monitor_cursor.bat
+echo REM Activate virtual environment >> scripts\monitor_cursor.bat
+echo call venv\Scripts\activate.bat >> scripts\monitor_cursor.bat
+echo. >> scripts\monitor_cursor.bat
+echo REM Set environment variables >> scripts\monitor_cursor.bat
+echo set PYTHONPATH=%%PYTHONPATH%%;%cd% >> scripts\monitor_cursor.bat
+echo. >> scripts\run_mcp_stdio.bat
+echo echo [START] Starting Cursor MCP execution monitor... >> scripts\monitor_cursor.bat
+echo echo [INFO] This script monitors MCP server execution >> scripts\run_mcp_stdio.bat
+echo echo [INFO] Press Ctrl+C to stop monitoring >> scripts\run_mcp_stdio.bat
+echo. >> scripts\run_mcp_stdio.bat
+echo REM Run monitoring script >> scripts\run_mcp_stdio.bat
+echo python monitor_cursor_execution.py >> scripts\run_mcp_stdio.bat
+
 echo.
 echo [SUCCESS] Setup completed!
 echo.
@@ -148,9 +207,15 @@ echo [NEXT] Next steps:
 echo 1. Environment file created: .env (from env.template)
 echo 2. Configuration file ready: config\settings.yaml
 echo 3. Start development server: scripts\run_dev.bat
-echo 4. Run tests: scripts\run_tests.bat
+echo 4. Start MCP HTTP server: scripts\run_mcp_server.bat
+echo 5. Start MCP stdio server: scripts\run_mcp_stdio.bat
+echo 6. Monitor Cursor integration: scripts\monitor_cursor.bat
+echo 7. Run tests: scripts\run_tests.bat
 echo.
 echo [DOCS] View development documentation: DEVELOPMENT_GUIDE.md
 echo [API] API documentation will be available after server starts: http://localhost:8000/docs
+echo.
+echo [MCP] MCP Tools available after starting stdio server
+echo [MONITOR] Use monitor_cursor.bat to debug Cursor integration issues
 echo.
 pause
