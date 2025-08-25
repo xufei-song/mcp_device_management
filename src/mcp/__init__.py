@@ -1,8 +1,6 @@
 """
-MCP协议实现模块
+MCP (Model Context Protocol) 实现包
 """
 
-from .protocol import MCPProtocol
-from .server import MCPServer, MCPConnectionManager
-
-__all__ = ["MCPProtocol", "MCPServer", "MCPConnectionManager"]
+__version__ = "1.0.0"
+__author__ = "TestDeviceManagementMCP"

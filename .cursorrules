@@ -1,272 +1,61 @@
-# MCP测试设备管理系统开发指导
+# MCP Streamable HTTP 服务器 - Cursor Rules
 
 ## 项目概述
-这是一个基于MCP（Model Context Protocol）的测试设备管理系统，用于管理和监控Android、iOS和Windows测试设备。
+基于 MCP 规范 2025-06-18 实现的最简单的 Streamable HTTP MCP 服务器，提供工具和提示功能。
 
-## 代码规范
-- 使用Python 3.8+
-- 遵循PEP 8代码规范
-- 所有函数和类必须有文档字符串
-- 使用类型注解
-- 错误处理要完善
+## 核心文件
+- `src/mcp/streamable_http_server.py` - 主服务器实现
+- `src/mcp/test_client.py` - 测试客户端
+- `run_mcp_server.py` - 启动脚本
+- `scripts/setup.bat` - 环境设置脚本
+- `scripts/activate.bat` - 环境激活脚本
 
-## 项目结构
-```
-TestDeviceManagmentMCP/
-├── Devices/                    # 设备目录
-│   ├── Android/               # Android设备文件夹
-│   ├── IOS/                   # iOS设备文件夹
-│   └── Windows/               # Windows设备文件夹
-├── src/                       # 源代码
-│   ├── mcp/                   # MCP协议实现
-│   ├── device/                # 设备管理核心
-│   ├── handlers/              # 请求处理器
-│   └── utils/                 # 工具函数
-├── config/                    # 配置文件
-├── tests/                     # 测试文件
-└── docs/                      # 文档
-```
+## 快速启动
+1. 运行环境设置: `scripts\setup.bat`
+2. 激活环境: `scripts\activate.bat`
+3. 启动服务器: `python run_mcp_server.py`
 
-## 核心设计原则
-1. **数据隔离**: 每个设备对应Devices目录下的独立文件夹
-2. **类型分类**: 按设备类型（Android/iOS/Windows）组织
-3. **MCP协议**: 实现标准的MCP资源管理和工具调用接口
-4. **数据管理**: 支持设备信息的增删改查和借用管理
-5. **可扩展性**: 易于添加新的设备类型和功能
+## 服务器特性
+- **青色调试输出**: 所有操作都有青色日志输出，便于调试
+- **2个固定工具**: 
+  - `simple_tool_1`: 接收消息并返回确认
+  - `simple_tool_2`: 接收数字并返回平方结果
+- **2个固定提示**: 
+  - `simple_prompt_1`: 主题相关提示
+  - `simple_prompt_2`: 问题相关提示
+- **会话管理**: 自动生成和管理会话ID
+- **安全验证**: Origin头验证，防止DNS重绑定攻击
+- **SSE支持**: Server-Sent Events流连接
 
-## 关键组件
+## API端点
+- `POST /mcp` - 处理所有MCP请求
+- `GET /mcp` - 建立SSE流连接
 
-### 设备管理器 (DeviceManager)
-- 负责设备数据的增删改查
-- 维护设备状态和借用信息
-- 提供设备数据管理接口
+## 支持的MCP方法
+- `initialize` - 初始化连接
+- `tools/list` - 获取工具列表
+- `tools/call` - 调用工具
+- `prompts/list` - 获取提示列表
 
-### MCP服务器 (MCPServer)
-- 实现MCP协议规范
-- 提供资源管理接口
-- 支持工具调用
+## 依赖项
+- fastapi
+- uvicorn
+- sse-starlette (可选，有fallback实现)
+- aiohttp (测试用)
 
-### 设备基类 (BaseDevice)
-- 定义设备通用接口
-- 提供基础操作方法
-- 支持设备特定实现
+## 测试方法
+通过Cursor直接测试，服务器运行在 http://127.0.0.1:8000
 
-## 开发优先级
-1. 基础MCP框架
-2. 设备数据管理器核心
-3. 设备信息模型定义
-4. HTTP API接口实现
-5. MCP协议工具实现
-6. 数据验证和错误处理
-7. 测试和文档完善
+## 安全特性
+- 只绑定到localhost (127.0.0.1)
+- Origin头验证
+- 会话ID管理
 
-## 技术栈
-- **后端**: Python + FastAPI
-- **数据库**: SQLite/PostgreSQL
-- **通信**: WebSocket
-- **配置**: YAML/JSON + 环境变量
-- **测试**: pytest
+## 调试功能
+- 青色ANSI日志输出
+- 详细的请求/响应日志
+- 会话ID跟踪
+- 错误处理
 
-## 环境配置和依赖管理
-
-### 自动化脚本解决方案
-**重要原则：所有环境问题都通过脚本解决，避免手动配置**
-
-#### 1. 主要脚本文件
-- **`scripts/setup.bat`**: 项目初始化和环境配置
-- **`scripts/activate.bat`**: 激活虚拟环境和设置环境变量
-- **`scripts/run_mcp_server.bat`**: 启动MCP HTTP/WebSocket服务器
-- **`scripts/run_mcp_stdio.bat`**: 启动MCP stdio服务器（Cursor集成）
-- **`scripts/monitor_cursor.bat`**: 监控Cursor MCP集成状态
-
-#### 2. 依赖包管理
-所有必要的Python包都通过 `setup.bat` 自动安装：
-```bash
-# 核心依赖
-pip install python-dotenv psutil websockets pytest
-
-# 开发依赖
-pip install pytest-cov pytest-asyncio httpx aiofiles
-
-# 配置和模板
-pip install pyyaml jinja2 python-multipart
-```
-
-#### 3. 环境变量配置
-- **`env.template`**: 环境变量模板文件
-- **`.env`**: 实际使用的环境变量文件（自动从模板生成）
-- **优先级**: 环境变量 > 配置文件 > 默认值
-
-#### 4. Python环境管理
-- **虚拟环境**: 自动创建和激活 `venv/`
-- **PYTHONPATH**: 自动设置项目路径
-- **依赖隔离**: 所有包安装在虚拟环境中
-
-### 环境变量文件
-- **`env.template`**: 环境变量模板文件，包含所有配置选项
-- **`.env`**: 实际使用的环境变量文件（从模板复制并修改）
-
-### 主要配置类别
-
-#### MCP服务器配置
-- `MCP_SERVER_HOST`: 服务器主机地址
-- `MCP_SERVER_PORT`: 服务器端口
-- `MCP_SERVER_WORKERS`: 工作进程数
-- `MCP_SERVER_RELOAD`: 是否启用热重载
-
-#### 设备发现配置
-- `DEVICE_DISCOVERY_INTERVAL`: 设备发现间隔（秒）
-- `ANDROID_AUTO_DISCOVER`: Android设备自动发现
-- `IOS_AUTO_DISCOVER`: iOS设备自动发现
-- `WINDOWS_AUTO_DISCOVER`: Windows设备自动发现
-
-#### 日志配置
-- `LOG_LEVEL`: 日志级别（DEBUG/INFO/WARNING/ERROR）
-- `LOG_FILE`: 日志文件路径
-- `LOG_MAX_SIZE`: 日志文件最大大小
-
-#### 安全配置
-- `CORS_ORIGINS`: 允许的跨域来源
-- `RATE_LIMIT_REQUESTS`: 速率限制请求数
-- `RATE_LIMIT_WINDOW`: 速率限制时间窗口
-
-#### 性能配置
-- `MAX_CONCURRENT_DEVICES`: 最大并发设备数
-- `DEVICE_OPERATION_TIMEOUT`: 设备操作超时时间
-- `CACHE_TTL`: 缓存生存时间
-
-### 配置文件优先级
-1. **环境变量** (最高优先级)
-2. **`config/settings.yaml`** (主配置文件)
-3. **默认值** (代码中定义)
-
-### 环境变量使用方式
-```python
-import os
-from dotenv import load_dotenv
-
-# 加载环境变量
-load_dotenv()
-
-# 获取配置值
-host = os.getenv('MCP_SERVER_HOST', 'localhost')
-port = int(os.getenv('MCP_SERVER_PORT', 8000))
-debug = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
-```
-
-## 注意事项
-- 所有数据操作要有错误处理
-- 支持并发数据访问
-- 实现数据验证和缓存
-- 提供详细的日志记录
-- **环境问题必须通过脚本解决，避免手动配置**
-
-## 系统架构和调用流程
-
-### 调用流程
-```
-Agent/Client → HTTP API → FastAPI → MCPProtocol → DeviceManager → 数据管理
-Agent/Client → WebSocket → MCPServer → MCPProtocol → DeviceManager → 数据管理
-```
-
-**详细说明：**
-1. **Agent/Client**: 外部客户端或AI Agent发起请求
-2. **HTTP API**: FastAPI提供的REST接口
-3. **WebSocket**: MCP协议的标准通信方式
-4. **FastAPI**: Web框架，处理HTTP请求和响应
-5. **MCPServer**: MCP协议服务器，处理WebSocket连接和MCP消息
-6. **MCPProtocol**: MCP协议实现层，工具调用的核心逻辑
-7. **DeviceManager**: 设备管理器，处理设备数据的CRUD操作
-8. **数据管理**: 对设备JSON文件的读写和管理操作
-
-### MCP协议支持
-系统现在支持完整的MCP协议：
-- **WebSocket端点**: `/mcp`
-- **标准MCP消息**: initialize, tools/list, tools/call, resources/list, resources/read
-- **实时通信**: 支持设备状态变化的事件广播
-- **双重接口**: 既支持HTTP API，也支持标准MCP协议
-
-### 接口修改原则
-
-**重要提醒：修改接口时需要同步更新整个调用链**
-
-#### 1. 新增接口时的完整流程
-- ✅ 在 `src/device/models.py` 中定义数据模型
-- ✅ 在 `src/device/manager.py` 中实现业务逻辑
-- ✅ 在 `src/mcp/protocol.py` 中添加MCP工具定义和实现
-- ✅ 在 `src/handlers/api.py` 中添加HTTP API端点
-- ✅ 在 `docs/MCP_API.md` 中更新API文档
-- ✅ 在 `tests/` 中添加相应的测试用例
-
-#### 2. 修改现有接口时的检查清单
-- [ ] 数据模型是否一致 (`models.py`)
-- [ ] 业务逻辑是否同步 (`manager.py`)
-- [ ] MCP工具定义是否更新 (`protocol.py`)
-- [ ] HTTP API是否同步 (`api.py`)
-- [ ] 文档是否更新 (`MCP_API.md`)
-- [ ] 测试用例是否覆盖 (`tests/`)
-
-#### 3. 接口层次结构
-```
-HTTP API层 (handlers/api.py)
-    ↓
-MCP协议层 (mcp/protocol.py)
-    ↓
-设备管理层 (device/manager.py)
-    ↓
-数据模型层 (device/models.py)
-    ↓
-数据存储层 (JSON文件管理)
-```
-
-#### 4. 代码一致性检查
-- **参数验证**: 确保所有层的参数定义一致
-- **错误处理**: 统一错误码和错误消息格式
-- **返回格式**: 保持API响应格式的一致性
-- **类型注解**: 使用相同的类型定义
-
-#### 5. 测试覆盖要求
-- 单元测试: 每个组件独立测试
-- 集成测试: 验证调用链的完整性
-- API测试: 确保HTTP接口正常工作
-- MCP测试: 验证MCP协议的正确性
-
-## MCP Cursor集成技术方案
-
-### 问题: Cursor显示"No tools or prompts"
-### 根因: HTTP服务器 vs stdio服务器协议差异
-
-### 解决方案:
-1. **创建mcp_stdio_server.py专用服务器**
-   - 实现stdio通信协议 (JSON-RPC over stdin/stdout)
-   - 支持initialize、tools/list、tools/call方法
-   - 异步消息处理和错误处理
-
-2. **更新mcp.json配置**
-   - 命令: python mcp_stdio_server.py
-   - 移除网络相关环境变量
-   - 工作目录: 项目根目录
-
-3. **架构说明**
-   - stdio服务器: Cursor MCP集成 (JSON-RPC)
-   - HTTP服务器: API调用和Web界面 (REST/WebSocket)
-   - 双服务器可同时运行，服务不同客户端
-
-4. **可用MCP工具 (14个)**
-   - device.list/create/update/delete
-   - device.borrow/return/info/search
-   - device.connect/disconnect/execute/status
-   - device.upload/download
-
-### 环境问题解决流程
-1. **运行 `scripts/setup.bat`**: 自动安装所有依赖
-2. **运行 `scripts/activate.bat`**: 激活虚拟环境
-3. **运行 `scripts/run_mcp_stdio.bat`**: 启动MCP stdio服务器
-4. **运行 `scripts/monitor_cursor.bat`**: 监控集成状态
-5. **重启Cursor**: 重新加载MCP配置
-
-### 常见环境问题
-- **ImportError**: 运行 `setup.bat` 安装缺失的包
-- **路径问题**: 使用 `activate.bat` 设置正确的PYTHONPATH
-- **权限问题**: 确保以管理员身份运行脚本
-- **编码问题**: 设置 `PYTHONIOENCODING=utf-8`
+## 规范遵循
+严格遵循 MCP 规范 2025-06-18，包括JSON-RPC 2.0消息格式、Streamable HTTP传输协议等。
