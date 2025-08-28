@@ -1,61 +1,56 @@
 # MCP Streamable HTTP 服务器 - Cursor Rules
 
 ## 项目概述
-基于 MCP 规范 2025-06-18 实现的最简单的 Streamable HTTP MCP 服务器，提供工具和提示功能。
-
-## 核心文件
-- `src/mcp/streamable_http_server.py` - 主服务器实现
-- `src/mcp/test_client.py` - 测试客户端
-- `run_mcp_server.py` - 启动脚本
-- `scripts/setup.bat` - 环境设置脚本
-- `scripts/activate.bat` - 环境激活脚本
+基于 MCP 规范 2024-11-05 实现的测试设备管理 MCP 服务器，提供工具和提示功能。
 
 ## 快速启动
 1. 运行环境设置: `scripts\setup.bat`
 2. 激活环境: `scripts\activate.bat`
-3. 启动服务器: `python run_mcp_server.py`
+3. 启动MCP服务器: `scripts\run_fastmcp_server.bat`
+
+## MCP集成方式
+本项目仅支持 **HTTP Stream** 集成方式：
+- **服务器地址**: http://localhost:8001/mcp
+- **传输协议**: HTTP (基于FastAPI)
+- **手动启动**: 使用 `scripts\run_fastmcp_server.bat` 手动启动服务器
+- **Cursor配置**: 通过 `~/.cursor/mcp.json` 配置HTTP连接
+- **不支持**: stdio、WebSocket等其他传输方式
 
 ## 服务器特性
-- **青色调试输出**: 所有操作都有青色日志输出，便于调试
-- **2个固定工具**: 
-  - `simple_tool_1`: 接收消息并返回确认
-  - `simple_tool_2`: 接收数字并返回平方结果
-- **2个固定提示**: 
-  - `simple_prompt_1`: 主题相关提示
-  - `simple_prompt_2`: 问题相关提示
-- **会话管理**: 自动生成和管理会话ID
-- **安全验证**: Origin头验证，防止DNS重绑定攻击
-- **SSE支持**: Server-Sent Events流连接
+- **详细日志输出**: 所有MCP操作都有详细日志输出，便于调试
+- **2个测试工具**: 
+  - `test_tool`: 接收消息并返回带时间戳的确认
+  - 扩展工具: 可通过add_tool方法添加更多工具
+- **2个测试提示**: 
+  - `test_prompt`: 基于主题和上下文生成提示内容
+  - 扩展提示: 可通过add_prompt方法添加更多提示
+- **MCP协议支持**: 完整支持initialize、tools/list、tools/call、prompts/list、prompts/get
+- **错误处理**: 完整的JSON-RPC 2.0错误处理机制
 
-## API端点
-- `POST /mcp` - 处理所有MCP请求
-- `GET /mcp` - 建立SSE流连接
+## Cursor MCP 配置
+已配置在 `~/.cursor/mcp.json`:
+```json
+{
+  "mcpServers": {
+    "TestDeviceManagement": {
+      "url": "http://localhost:8001/mcp",
+      "description": "测试设备管理MCP服务器 - HTTP Stream方式连接"
+    }
+  }
+}
+```
 
-## 支持的MCP方法
-- `initialize` - 初始化连接
-- `tools/list` - 获取工具列表
-- `tools/call` - 调用工具
-- `prompts/list` - 获取提示列表
+## 使用流程
+1. 启动MCP服务器: `scripts\run_fastmcp_server.bat`
+2. 确认服务器运行在 http://localhost:8001
+3. 在Cursor中直接使用MCP工具和提示
+4. 查看服务器日志了解MCP交互情况
 
-## 依赖项
-- fastapi
-- uvicorn
-- sse-starlette (可选，有fallback实现)
-- aiohttp (测试用)
-
-## 测试方法
-通过Cursor直接测试，服务器运行在 http://127.0.0.1:8000
-
-## 安全特性
-- 只绑定到localhost (127.0.0.1)
-- Origin头验证
-- 会话ID管理
-
-## 调试功能
-- 青色ANSI日志输出
-- 详细的请求/响应日志
-- 会话ID跟踪
-- 错误处理
+## 开发规则
+- **仅HTTP传输**: 本工程只考虑HTTP Stream集成方式
+- **手动启动**: MCP服务器需要手动启动，不在mcp.json中配置自动启动
+- **扩展开发**: 新增工具和提示都通过add_tool/add_prompt方法添加
+- **日志优先**: 所有操作都要有详细的日志输出
 
 ## 规范遵循
-严格遵循 MCP 规范 2025-06-18，包括JSON-RPC 2.0消息格式、Streamable HTTP传输协议等。
+严格遵循 MCP 规范 2024-11-05，包括JSON-RPC 2.0消息格式、HTTP传输协议等。

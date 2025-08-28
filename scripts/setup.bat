@@ -46,15 +46,22 @@ pip install pytest
 pip install pytest-cov
 pip install pytest-asyncio
 pip install httpx
+pip install aiohttp
 pip install aiofiles
 pip install pyyaml
 pip install jinja2
 pip install python-multipart
+pip install fastapi
+pip install uvicorn
+
+REM Install FastMCP library for MCP server development (optional)
+echo [INFO] Installing FastMCP library...
+pip install fastmcp
 
 REM Create necessary directories
 echo [INFO] Creating project directories...
 if not exist "src" mkdir src
-if not exist "src\mcp" mkdir src\mcp
+if not exist "src\mcp_server" mkdir src\mcp_server
 if not exist "src\device" mkdir src\device
 if not exist "src\handlers" mkdir src\handlers
 if not exist "src\utils" mkdir src\utils
@@ -70,7 +77,7 @@ if not exist ".vscode" mkdir .vscode
 REM Create __init__.py files
 echo [INFO] Creating Python package files...
 if not exist "src\__init__.py" type nul > src\__init__.py
-if not exist "src\mcp\__init__.py" type nul > src\mcp\__init__.py
+if not exist "src\mcp_server\__init__.py" type nul > src\mcp_server\__init__.py
 if not exist "src\device\__init__.py" type nul > src\device\__init__.py
 if not exist "src\handlers\__init__.py" type nul > src\handlers\__init__.py
 if not exist "src\utils\__init__.py" type nul > src\utils\__init__.py
@@ -216,6 +223,7 @@ echo [DOCS] View development documentation: DEVELOPMENT_GUIDE.md
 echo [API] API documentation will be available after server starts: http://localhost:8000/docs
 echo.
 echo [MCP] MCP Tools available after starting stdio server
+echo [FASTMCP] FastMCP library installed for simplified MCP server development
 echo [MONITOR] Use monitor_cursor.bat to debug Cursor integration issues
 echo.
 pause

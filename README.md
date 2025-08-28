@@ -1,8 +1,21 @@
-                                  
+# Test Device Management MCP
 
 ## 项目概述
 
 这是一个基于MCP（Model Context Protocol）的测试设备管理系统，用于管理和监控不同类型的测试设备，包括Android、iOS和Windows设备。
+
+## 快速启动
+
+```bash
+# 1. 运行设置脚本（只需要运行一次）
+scripts\setup.bat
+
+# 2. 激活虚拟环境
+scripts\activate.bat
+
+# 3. 启动MCP服务器
+scripts\run_fastmcp_server.bat
+```
 
 ## 项目结构
 
@@ -13,15 +26,57 @@ TestDeviceManagmentMCP/
 │   ├── IOS/                   # iOS设备
 │   └── Windows/               # Windows设备
 ├── src/                       # 源代码目录
-│   ├── mcp/                   # MCP协议实现
+│   ├── mcp_server/            # MCP服务器实现
 │   ├── device/                # 设备管理核心
 │   ├── handlers/              # 请求处理器
 │   └── utils/                 # 工具函数
+├── scripts/                   # 启动脚本
 ├── config/                    # 配置文件
 ├── tests/                     # 测试文件
-├── docs/                      # 文档
-└── requirements.txt           # 依赖包
+└── docs/                      # 文档
 ```
+
+## MCP服务器特性
+
+### 🔧 测试工具 (test_tool)
+- **功能**: 接收消息并返回带时间戳的确认响应
+- **参数**: `message` (字符串) - 测试消息内容
+- **返回**: JSON格式的响应，包含状态、消息、时间戳和服务器信息
+
+### 💬 测试提示 (test_prompt)
+- **功能**: 根据主题和上下文生成测试提示内容
+- **参数**: 
+  - `topic` (字符串) - 提示主题
+  - `context` (字符串) - 上下文信息
+- **返回**: Markdown格式的提示内容
+
+### 🌐 HTTP Stream 支持
+- 支持标准的MCP HTTP协议
+- 基于FastAPI和uvicorn构建
+- 默认运行在 `localhost:8001`
+- 详细的调试输出，便于开发调试
+
+## Cursor集成
+
+本项目已集成到Cursor中，使用HTTP Stream方式：
+
+### MCP配置 (`~/.cursor/mcp.json`)
+```json
+{
+  "mcpServers": {
+    "TestDeviceManagement": {
+      "url": "http://localhost:8001/mcp",
+      "description": "测试设备管理MCP服务器 - HTTP Stream方式连接"
+    }
+  }
+}
+```
+
+### 使用流程
+1. 启动MCP服务器: `scripts\run_fastmcp_server.bat`
+2. 确认服务器运行在 http://localhost:8001
+3. 在Cursor中直接使用MCP工具和提示
+4. 查看服务器日志了解MCP交互情况
 
 ## 核心功能设计
 
@@ -32,9 +87,10 @@ TestDeviceManagmentMCP/
 - **设备信息**: 存储设备详细信息（型号、版本、能力等）
 
 ### 2. MCP协议实现
-- **资源管理**: 实现MCP资源管理接口
+- **HTTP Stream**: 仅支持HTTP Stream集成方式
 - **工具调用**: 提供设备操作工具
-- **事件通知**: 设备状态变化事件推送
+- **提示生成**: 基于上下文的智能提示
+- **详细日志**: 所有MCP操作都有详细日志输出
 
 ### 3. 设备操作
 - **连接管理**: 建立/断开设备连接
@@ -48,87 +104,129 @@ TestDeviceManagmentMCP/
 - **语言**: Python 3.8+
 - **框架**: FastAPI (用于MCP服务器)
 - **数据库**: SQLite/PostgreSQL (设备信息存储)
-- **通信**: WebSocket (实时状态更新)
+- **通信**: HTTP (MCP协议), WebSocket (实时状态更新)
 - **序列化**: JSON/YAML (配置文件)
 
-### MCP协议实现
-```python
-# 示例MCP服务器结构
-class TestDeviceMCPServer:
-    def __init__(self):
-        self.device_manager = DeviceManager()
-        self.resource_manager = ResourceManager()
-    
-    async def list_resources(self) -> List[Resource]:
-        # 返回所有设备资源
-        pass
-    
-    async def read_resource(self, uri: str) -> Resource:
-        # 读取特定设备信息
-        pass
-    
-    async def list_tools(self) -> List[Tool]:
-        # 返回可用工具列表
-        pass
-    
-    async def call_tool(self, name: str, arguments: Dict) -> ToolResult:
-        # 执行工具调用
-        pass
+### 依赖包
+- fastapi: Web框架
+- uvicorn: ASGI服务器
+- aiohttp: 异步HTTP客户端
+- pyyaml: YAML配置文件支持
+- python-dotenv: 环境变量管理
+
+## 手动测试MCP接口
+
+### 工具调用示例
+```bash
+curl -X POST http://localhost:8001/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "test_tool",
+      "arguments": {
+        "message": "Hello MCP"
+      }
+    }
+  }'
 ```
 
-## 开发阶段规划
+### 提示调用示例
+```bash
+curl -X POST http://localhost:8001/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "prompts/get",
+    "params": {
+      "name": "test_prompt",
+      "arguments": {
+        "topic": "设备管理",
+        "context": "测试环境"
+      }
+    }
+  }'
+```
 
-### 第一阶段：基础架构
-1. **项目初始化**
-   - 创建Python项目结构
-   - 安装必要依赖
-   - 配置开发环境
+## 开发扩展
 
-2. **MCP协议框架**
-   - 实现基础MCP服务器
-   - 定义资源结构
-   - 实现工具接口
+### 添加新工具
+在 `src/mcp_server/fastmcp_test_server.py` 中添加:
 
-3. **设备管理器**
-   - 创建设备基类
-   - 实现设备发现机制
-   - 建立设备状态管理
+```python
+async def new_tool_handler(param: str) -> str:
+    # 工具实现
+    return "result"
 
-### 第二阶段：设备集成
-1. **Android设备支持**
-   - ADB连接管理
-   - 设备信息获取
-   - 命令执行接口
+mcp_server.add_tool(
+    name="new_tool",
+    description="新工具描述",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "param": {"type": "string", "description": "参数描述"}
+        }
+    },
+    handler=new_tool_handler
+)
+```
 
-2. **iOS设备支持**
-   - libimobiledevice集成
-   - 设备配对管理
-   - 应用安装/卸载
+### 添加新提示
+在 `src/mcp_server/fastmcp_test_server.py` 中添加:
 
-3. **Windows设备支持**
-   - WMI/WinRM连接
-   - 系统信息收集
-   - 远程命令执行
+```python
+async def new_prompt_handler(param: str) -> str:
+    # 提示实现
+    return "prompt content"
 
-### 第三阶段：高级功能
-1. **实时监控**
-   - WebSocket状态推送
-   - 设备健康检查
-   - 告警机制
+mcp_server.add_prompt(
+    name="new_prompt",
+    description="新提示描述",
+    arguments=[
+        {"name": "param", "description": "参数描述", "required": False}
+    ],
+    handler=new_prompt_handler
+)
+```
 
-2. **测试自动化**
-   - 测试脚本执行
-   - 结果收集分析
-   - 报告生成
+## 故障排查
 
-3. **用户界面**
-   - Web管理界面
-   - 设备状态展示
-   - 操作控制面板
+### 常见问题
 
-## 关键接口设计
+1. **依赖包未安装**
+   ```bash
+   pip install fastapi uvicorn aiohttp
+   ```
 
-### 设备资源URI格式
+2. **端口被占用**
+   - 修改 `fastmcp_test_server.py` 中的端口号
+   - 或者设置环境变量 `FASTMCP_PORT`
+
+3. **Cursor无法连接到MCP服务器**
+   - 确保MCP服务器正在运行
+   - 检查端口8001是否被占用
+   - 验证URL配置是否正确: `http://localhost:8001/mcp`
+
+### 日志调试
+服务器运行时会输出详细调试信息，包括:
+- MCP请求/响应日志
+- 工具调用日志
+- 提示生成日志
+- 错误信息
+- 服务器状态
+
+## 开发规则
+
+- **仅HTTP传输**: 本工程只考虑HTTP Stream集成方式
+- **手动启动**: MCP服务器需要手动启动，不在mcp.json中配置自动启动
+- **扩展开发**: 新增工具和提示都通过add_tool/add_prompt方法添加
+- **日志优先**: 所有操作都要有详细的日志输出
+
+## 设备资源URI格式
+
 ```
 mcp://test-devices/devices/{device_type}/{device_id}
 mcp://test-devices/devices/android/emulator-5554
@@ -136,7 +234,8 @@ mcp://test-devices/devices/ios/00008120-001C25D40C0A002E
 mcp://test-devices/devices/windows/DESKTOP-ABC123
 ```
 
-### 核心工具列表
+## 核心工具列表（计划实现）
+
 1. **device.list** - 列出所有设备
 2. **device.connect** - 连接设备
 3. **device.disconnect** - 断开设备
@@ -145,119 +244,24 @@ mcp://test-devices/devices/windows/DESKTOP-ABC123
 6. **device.download** - 下载文件
 7. **device.status** - 获取设备状态
 
-## 配置文件示例
+## 环境变量配置
 
-### MCP服务器配置
-```yaml
-# config/mcp_server.yaml
-server:
-  host: "localhost"
-  port: 8000
-  debug: true
-
-devices:
-  android:
-    adb_path: "/usr/local/bin/adb"
-    auto_discover: true
-  ios:
-    libimobiledevice_path: "/usr/local/bin/ideviceinfo"
-    pairing_timeout: 30
-  windows:
-    winrm_port: 5985
-
-logging:
-  level: "INFO"
-  file: "logs/mcp_server.log"
-```
-
-## 开发环境设置
-
-### 1. 安装依赖
-```bash
-pip install fastapi uvicorn pydantic sqlalchemy websockets
-pip install pyyaml python-dotenv
-```
-
-### 2. 环境变量
 ```bash
 # .env
 MCP_SERVER_HOST=localhost
-MCP_SERVER_PORT=8000
+MCP_SERVER_PORT=8001
 DEVICE_DISCOVERY_INTERVAL=30
 LOG_LEVEL=INFO
 ```
 
-### 3. 开发工具
-- **代码编辑器**: VS Code + Python扩展
-- **调试工具**: Python debugger (pdb)
-- **API测试**: Postman/Insomnia
-- **数据库**: SQLite Browser
+## 规范遵循
 
-## 测试策略
+严格遵循 MCP 规范 2024-11-05，包括JSON-RPC 2.0消息格式、HTTP传输协议等。
 
-### 单元测试
-- MCP协议实现测试
-- 设备管理器测试
-- 工具函数测试
+## 许可证
 
-### 集成测试
-- 设备连接测试
-- 命令执行测试
-- 状态同步测试
-
-### 端到端测试
-- 完整工作流程测试
-- 多设备并发测试
-- 错误处理测试
-
-## 部署说明
-
-### 开发环境
-```cmd
-python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### 生产环境
-```cmd
-# 使用gunicorn (需要先安装)
-pip install gunicorn
-gunicorn src.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
-```
-
-## 贡献指南
-
-1. **代码规范**: 遵循PEP 8 Python代码规范
-2. **文档**: 所有新功能需要更新文档
-3. **测试**: 新功能需要包含相应的测试用例
-4. **提交**: 使用清晰的提交信息
-
-## 下一步行动
-
-1. 创建项目基础结构
-2. 实现MCP协议框架
-3. 开发设备管理器
-4. 集成Android设备支持
-5. 添加iOS和Windows设备支持
-6. 实现实时监控功能
-7. 开发Web管理界面
-
-## 联系方式
-
-如有问题或建议，请通过以下方式联系：
-- 项目仓库: [GitHub Repository]
-- 问题反馈: [Issues]
-- 讨论区: [Discussions]
+本项目遵循项目根目录的许可证条款。
 
 ---
 
 **注意**: 这是一个开发指导文档，在实际开发过程中可能需要根据具体需求和环境进行调整。
-
-
-# 1. 运行设置脚本（只需要运行一次）
-scripts\setup.bat
-
-# 2. 激活虚拟环境
-venv\Scripts\activate.bat
-
-# 3. 启动MCP服务器
-python run_mcp_server.py
