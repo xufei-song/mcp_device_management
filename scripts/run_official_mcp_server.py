@@ -37,7 +37,7 @@ def check_virtual_env():
 
 # 导入MCP服务器
 try:
-    from src.mcp_server.test_device_mangement_server import run_with_fastapi
+    from src.mcp_server.test_device_mangement_server import create_simple_http_server
 except ImportError as e:
     print(f"错误: 无法导入MCP服务器模块: {e}")
     print("请确保已运行 scripts/setup.bat 安装所有依赖")
@@ -89,7 +89,7 @@ def main():
         
         # 创建FastAPI应用
         logger.info("创建MCP HTTP服务器...")
-        fastapi_app = run_with_fastapi()
+        fastapi_app = create_simple_http_server()
         
         logger.info("服务器启动中...")
         logger.info("按 Ctrl+C 停止服务器")
