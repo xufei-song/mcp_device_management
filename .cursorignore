@@ -49,9 +49,3 @@ datasets/
 build/
 dist/
 *.egg-info/
-
-# MCP开发上下文引用
-README.md
-src/mcp_server/README.md
-src/mcp_server/fastmcp_test_server.py
-scripts/run_fastmcp_server.bat

@@ -47,10 +47,13 @@
 4. 查看服务器日志了解MCP交互情况
 
 ## 开发规则
-- **仅HTTP传输**: 本工程只考虑HTTP Stream集成方式
+- **官方SDK强制**: 必须使用官方MCP Python SDK (github.com/modelcontextprotocol/python-sdk) 开发MCP服务器
+- **仅HTTP传输**: 本工程只考虑HTTP Stream集成方式，不支持stdio、WebSocket等其他传输方式
+- **HTTP Stream Only**: 仅开发基于HTTP的MCP服务器，使用官方SDK的streamable_http传输协议
 - **手动启动**: MCP服务器需要手动启动，不在mcp.json中配置自动启动
-- **扩展开发**: 新增工具和提示都通过add_tool/add_prompt方法添加
+- **扩展开发**: 新增工具和提示都通过官方SDK的标准方法添加
 - **日志优先**: 所有操作都要有详细的日志输出
+- **SDK规范**: 严格遵循官方SDK的API设计和最佳实践
 
 ## 规范遵循
 严格遵循 MCP 规范 2024-11-05，包括JSON-RPC 2.0消息格式、HTTP传输协议等。

@@ -340,7 +340,7 @@ class SimpleMCPServer:
 # 全局服务器实例
 mcp_server = SimpleMCPServer("TestDeviceManagement")
 
-async def start_server(host: str = "localhost", port: int = 8001):
+async def start_server(host: str = "localhost", port: int = 8002):
     """启动服务器"""
     try:
         logger.info("=" * 60)
@@ -375,7 +375,7 @@ async def start_server(host: str = "localhost", port: int = 8001):
 async def main():
     """主函数"""
     try:
-        await start_server(host="localhost", port=8001)
+        await start_server(host="localhost", port=8002)
     except KeyboardInterrupt:
         logger.info("[停止] 收到停止信号，正在关闭服务器...")
     except Exception as e:

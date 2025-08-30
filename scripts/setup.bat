@@ -54,6 +54,10 @@ pip install python-multipart
 pip install fastapi
 pip install uvicorn
 
+REM Install official MCP Python SDK
+echo [INFO] Installing official MCP Python SDK...
+pip install mcp
+
 REM Install FastMCP library for MCP server development (optional)
 echo [INFO] Installing FastMCP library...
 pip install fastmcp
