@@ -41,8 +41,8 @@
 ```
 
 ## 使用流程
-1. 启动MCP服务器: `scripts\run_fastmcp_server.bat`
-2. 确认服务器运行在 http://localhost:8001
+1. 启动MCP服务器: `scripts\run_mcp_server2.bat` (推荐)
+2. 确认服务器运行在 http://localhost:8002
 3. 在Cursor中直接使用MCP工具和提示
 4. 查看服务器日志了解MCP交互情况
 

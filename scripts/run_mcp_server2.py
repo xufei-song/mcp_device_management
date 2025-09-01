@@ -42,19 +42,20 @@ def main():
             print("请运行: pip install mcp")
             sys.exit(1)
         
-        # 导入并启动服务器
+        # 导入并启动服务器 - 使用模块方式
         logger.info("启动MCP服务器2 (官方SDK StreamableHTTP)")
         logger.info("端口: 8002")
         logger.info("端点: http://127.0.0.1:8002/mcp")
         logger.info("-" * 60)
         
-        from src.mcp_server2.server import main as server_main
+        # 使用Python模块方式启动（相当于 python -m src.mcp_server2）
+        import runpy
         
-        # 启动服务器 - 使用click的standalone_mode调用
+        # 启动服务器 - 使用模块运行方式
         original_argv = sys.argv
         try:
-            sys.argv = ["server", "--port", "8002"]
-            server_main(standalone_mode=False)
+            sys.argv = ["__main__", "--port", "8002"]
+            runpy.run_module("src.mcp_server2", run_name="__main__")
             return 0
         finally:
             sys.argv = original_argv
