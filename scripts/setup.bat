@@ -53,6 +53,8 @@ pip install jinja2
 pip install python-multipart
 pip install fastapi
 pip install uvicorn
+pip install openpyxl
+pip install pandas
 
 REM Install official MCP Python SDK
 echo [INFO] Installing official MCP Python SDK...
@@ -70,12 +72,6 @@ if not exist "src\device" mkdir src\device
 if not exist "src\handlers" mkdir src\handlers
 if not exist "src\utils" mkdir src\utils
 if not exist "config" mkdir config
-if not exist "tests" mkdir tests
-if not exist "docs" mkdir docs
-if not exist "logs" mkdir logs
-if not exist "data" mkdir data
-if not exist "uploads" mkdir uploads
-if not exist "downloads" mkdir downloads
 if not exist ".vscode" mkdir .vscode
 
 REM Create __init__.py files
@@ -86,12 +82,6 @@ if not exist "src\device\__init__.py" type nul > src\device\__init__.py
 if not exist "src\handlers\__init__.py" type nul > src\handlers\__init__.py
 if not exist "src\utils\__init__.py" type nul > src\utils\__init__.py
 if not exist "tests\__init__.py" type nul > tests\__init__.py
-
-REM Create sample device directories
-echo [INFO] Creating device directories...
-if not exist "Devices\Android" mkdir Devices\Android
-if not exist "Devices\IOS" mkdir Devices\IOS
-if not exist "Devices\Windows" mkdir Devices\Windows
 
 REM Create sample device files
 echo [INFO] Creating sample device files...
@@ -126,30 +116,6 @@ if exist "env.template" (
     echo WINDOWS_AUTO_DISCOVER=false >> .env
 )
 
-REM Create startup scripts
-echo [INFO] Creating startup scripts...
-echo @echo off > scripts\run_dev.bat
-echo REM Activate virtual environment >> scripts\run_dev.bat
-echo call venv\Scripts\activate.bat >> scripts\run_dev.bat
-echo. >> scripts\run_dev.bat
-echo REM Set environment variables >> scripts\run_dev.bat
-echo set PYTHONPATH=%%PYTHONPATH%%;%cd%\src >> scripts\run_dev.bat
-echo set MCP_SERVER_HOST=localhost >> scripts\run_dev.bat
-echo set MCP_SERVER_PORT=8000 >> scripts\run_dev.bat
-echo set LOG_LEVEL=DEBUG >> scripts\run_dev.bat
-echo. >> scripts\run_dev.bat
-echo REM Create necessary directories >> scripts\run_dev.bat
-echo if not exist "logs" mkdir logs >> scripts\run_dev.bat
-echo if not exist "data" mkdir data >> scripts\run_dev.bat
-echo. >> scripts\run_dev.bat
-echo echo [START] Starting MCP Test Device Management System development server... >> scripts\run_dev.bat
-echo echo [INFO] Server address: http://localhost:8000 >> scripts\run_dev.bat
-echo echo [INFO] API documentation: http://localhost:8000/docs >> scripts\run_dev.bat
-echo echo [INFO] Press Ctrl+C to stop server >> scripts\run_dev.bat
-echo. >> scripts\run_dev.bat
-echo REM Run development server >> scripts\run_dev.bat
-echo python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000 >> scripts\run_dev.bat
-
 REM Create test script
 echo [INFO] Creating test script...
 echo @echo off > scripts\run_tests.bat
@@ -179,48 +145,13 @@ echo. >> scripts\run_mcp_server.bat
 echo REM Run MCP server >> scripts\run_mcp_server.bat
 echo python run_mcp_server.py >> scripts\run_mcp_server.bat
 
-REM Create MCP stdio server script
-echo [INFO] Creating MCP stdio server script...
-echo @echo off > scripts\run_mcp_stdio.bat
-echo REM Activate virtual environment >> scripts\run_mcp_stdio.bat
-echo call venv\Scripts\activate.bat >> scripts\run_mcp_stdio.bat
-echo. >> scripts\run_mcp_stdio.bat
-echo REM Set environment variables >> scripts\run_mcp_stdio.bat
-echo set PYTHONPATH=%%PYTHONPATH%%;%cd% >> scripts\run_mcp_stdio.bat
-echo. >> scripts\run_mcp_stdio.bat
-echo echo [START] Starting MCP stdio server for Cursor integration... >> scripts\run_mcp_stdio.bat
-echo echo [INFO] This server communicates via stdin/stdout >> scripts\run_mcp_stdio.bat
-echo echo [INFO] Press Ctrl+C to stop server >> scripts\run_mcp_stdio.bat
-echo. >> scripts\run_mcp_stdio.bat
-echo REM Run MCP stdio server >> scripts\run_mcp_stdio.bat
-echo python mcp_stdio_server.py >> scripts\run_mcp_stdio.bat
-
-REM Create monitoring script
-echo [INFO] Creating monitoring script...
-echo @echo off > scripts\monitor_cursor.bat
-echo REM Activate virtual environment >> scripts\monitor_cursor.bat
-echo call venv\Scripts\activate.bat >> scripts\monitor_cursor.bat
-echo. >> scripts\monitor_cursor.bat
-echo REM Set environment variables >> scripts\monitor_cursor.bat
-echo set PYTHONPATH=%%PYTHONPATH%%;%cd% >> scripts\monitor_cursor.bat
-echo. >> scripts\run_mcp_stdio.bat
-echo echo [START] Starting Cursor MCP execution monitor... >> scripts\monitor_cursor.bat
-echo echo [INFO] This script monitors MCP server execution >> scripts\run_mcp_stdio.bat
-echo echo [INFO] Press Ctrl+C to stop monitoring >> scripts\run_mcp_stdio.bat
-echo. >> scripts\run_mcp_stdio.bat
-echo REM Run monitoring script >> scripts\run_mcp_stdio.bat
-echo python monitor_cursor_execution.py >> scripts\run_mcp_stdio.bat
-
 echo.
 echo [SUCCESS] Setup completed!
 echo.
 echo [NEXT] Next steps:
 echo 1. Environment file created: .env (from env.template)
 echo 2. Configuration file ready: config\settings.yaml
-echo 3. Start development server: scripts\run_dev.bat
 echo 4. Start MCP HTTP server: scripts\run_mcp_server.bat
-echo 5. Start MCP stdio server: scripts\run_mcp_stdio.bat
-echo 6. Monitor Cursor integration: scripts\monitor_cursor.bat
 echo 7. Run tests: scripts\run_tests.bat
 echo.
 echo [DOCS] View development documentation: DEVELOPMENT_GUIDE.md
@@ -228,6 +159,5 @@ echo [API] API documentation will be available after server starts: http://local
 echo.
 echo [MCP] MCP Tools available after starting stdio server
 echo [FASTMCP] FastMCP library installed for simplified MCP server development
-echo [MONITOR] Use monitor_cursor.bat to debug Cursor integration issues
 echo.
 pause

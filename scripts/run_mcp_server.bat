@@ -3,7 +3,7 @@ REM Activate virtual environment
 call venv\Scripts\activate.bat 
  
 REM Set environment variables 
-set PYTHONPATH=%PYTHONPATH%;D:\work\workspace\TestDeviceManagmentMCP 
+set PYTHONPATH=%PYTHONPATH%;C:\Users\xufeisong\Desktop\workspace\mcp_device_management 
  
 echo [START] Starting MCP HTTP/WebSocket Server... 
 echo [INFO] Server address: http://localhost:8000 

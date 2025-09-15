@@ -107,3 +107,8 @@ device = device_manager.update_device("device-id", DeviceUpdate(...))
 - **MCP Protocol Support**: Full support for initialize, tools/list, tools/call, prompts/list, prompts/get
 - **Error Handling**: Complete JSON-RPC 2.0 error handling
 - **Standard Compliance**: Strict adherence to MCP 2024-11-05 specification
+
+## Project Read Me
+
+For detailed project information, setup instructions, and usage examples, see: [README.md](../README.md)
+

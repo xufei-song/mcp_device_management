@@ -21,10 +21,9 @@ scripts\run_mcp_server2.bat
 
 ```
 TestDeviceManagmentMCP/
-├── Devices/                    # 设备目录
-│   ├── Android/               # Android设备
-│   ├── IOS/                   # iOS设备
-│   └── Windows/               # Windows设备
+├── Devices/                    # 设备数据目录
+│   ├── test_devices.xlsx     # 设备清单XLSX文件（主数据源）
+│   └── backup/               # 历史备份文件
 ├── src/                       # 源代码目录
 │   ├── mcp_server2/           # MCP服务器实现
 │   │   ├── server.py          # 主服务器实现
@@ -79,10 +78,11 @@ TestDeviceManagmentMCP/
 ## 核心功能设计
 
 ### 1. 设备管理
-- **设备注册**: 记录设备基本信息（SKU、序列号、型号等）
-- **设备状态**: 跟踪设备状态（可用/借用中/维护中/报废）
-- **借用记录**: 记录谁借用了设备、借用时间、预计归还时间
-- **设备分类**: 按类型（Android/iOS/Windows）组织设备
+- **XLSX数据存储**: 使用Excel XLSX格式存储所有设备信息，支持丰富的数据格式和验证
+- **设备信息**: 记录设备基本信息（SKU、序列号、型号、品牌等）
+- **状态跟踪**: 跟踪设备状态（可用/正在使用/维护中/报废）
+- **借用记录**: 记录借用者、所属manager、借用时间等信息
+- **数据完整性**: XLSX格式支持数据验证、格式化和复杂的工作表结构
 
 ### 2. MCP协议实现
 - **HTTP Stream**: 使用官方MCP Python SDK
@@ -94,11 +94,41 @@ TestDeviceManagmentMCP/
 - **状态更新**: 更新设备状态和位置
 - **信息查询**: 查询设备详细信息和借用历史
 
+## 数据存储格式
+
+### XLSX设备数据结构
+设备数据统一存储在 `Devices/test_devices.xlsx` 文件中，包含以下字段：
+
+| 字段名称 | 描述 | 示例值 |
+|---------|------|--------|
+| 创建日期 | 设备录入系统的日期 | 2023.11.28 |
+| 设备名称 | 设备的完整名称 | SAMSUNG Galaxy S24 |
+| 设备OS | 设备操作系统 | Android |
+| SKU | 设备型号/配置信息 | 8GB+256GB 星河白 |
+| 类型 | 设备类别 | 手机/平板/Chromebook/Quest |
+| 品牌 | 设备品牌 | Samsung/Pixel/Honor |
+| 借用者 | 当前借用人 | vendor(Jayce) |
+| 所属manager | 设备负责人 | Gary |
+| 设备序列号 | 设备唯一标识 | RFCX10L1TZR |
+| 资产编号 | 公司资产编号 | E2946640 |
+| 是否盘点 | 盘点状态 | 是/否 |
+| 设备状态 | 当前状态 | 可用/正在使用/维护中/报废 |
+
+### XLSX格式优势
+- **丰富格式**: 支持数据验证、条件格式、下拉列表等Excel功能
+- **多工作表**: 可以分设备类型创建不同的工作表组织数据
+- **数据完整性**: 内置数据验证确保数据质量和一致性
+- **用户友好**: 非技术人员可以直接使用Excel查看和编辑
+- **强大分析**: 支持Excel的透视表、图表、公式等分析功能
+- **格式保留**: 保持单元格格式、颜色、注释等丰富信息
+
 ## 技术架构
 
 ### 后端技术栈
 - **语言**: Python 3.8+
 - **框架**: Starlette + 官方MCP Python SDK
+- **数据存储**: XLSX文件格式（主数据源）
+- **数据处理**: openpyxl/pandas处理Excel数据
 - **通信**: HTTP Stream (MCP标准)
 - **特性**: 实时通知、断点续传、会话管理
 
@@ -106,6 +136,8 @@ TestDeviceManagmentMCP/
 - mcp: 官方MCP Python SDK
 - starlette: ASGI框架
 - uvicorn: ASGI服务器
+- openpyxl: Excel文件读写操作
+- pandas: 数据处理和分析
 - anyio: 异步I/O支持
 - click: 命令行接口
 
@@ -205,7 +237,7 @@ async def new_prompt(name: str, arguments: dict[str, str] | None = None) -> type
 
 1. **依赖包未安装**
    ```bash
-   pip install mcp starlette uvicorn
+   pip install mcp starlette uvicorn openpyxl pandas
    ```
 
 2. **端口被占用**

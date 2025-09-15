@@ -3,7 +3,7 @@ REM Activate virtual environment
 call venv\Scripts\activate.bat 
  
 REM Set environment variables 
-set PYTHONPATH=%PYTHONPATH%;D:\work\workspace\TestDeviceManagmentMCP\src 
+set PYTHONPATH=%PYTHONPATH%;C:\Users\xufeisong\Desktop\workspace\mcp_device_management\src 
 set MCP_SERVER_HOST=localhost 
 set MCP_SERVER_PORT=8000 
 set LOG_LEVEL=DEBUG 
