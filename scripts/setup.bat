@@ -116,18 +116,6 @@ if exist "env.template" (
     echo WINDOWS_AUTO_DISCOVER=false >> .env
 )
 
-REM Create test script
-echo [INFO] Creating test script...
-echo @echo off > scripts\run_tests.bat
-echo REM Activate virtual environment >> scripts\run_tests.bat
-echo call venv\Scripts\activate.bat >> scripts\run_tests.bat
-echo. >> scripts\run_tests.bat
-echo REM Set environment variables >> scripts\run_tests.bat
-echo set PYTHONPATH=%%PYTHONPATH%%;%cd%\src >> scripts\run_tests.bat
-echo. >> scripts\run_tests.bat
-echo echo [INFO] Running tests... >> scripts\run_tests.bat
-echo pytest tests\ -v --cov=src --cov-report=html --cov-report=term-missing >> scripts\run_tests.bat
-
 REM Create MCP server script
 echo [INFO] Creating MCP server script...
 echo @echo off > scripts\run_mcp_server.bat

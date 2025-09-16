@@ -55,14 +55,6 @@ if exist ".env" (
     echo [TIP] You can create .env from env.template for custom configuration
 )
 
-REM Create necessary directories if they don't exist
-echo [INFO] Ensuring project directories exist...
-if not exist "logs" mkdir logs
-if not exist "data" mkdir data
-if not exist "uploads" mkdir uploads
-if not exist "downloads" mkdir downloads
-if not exist "backups" mkdir backups
-if not exist "temp" mkdir temp
 
 REM Verify Python and key packages
 echo [INFO] Verifying Python environment...
@@ -88,11 +80,6 @@ echo [INFO] Python executable: %where python%
 echo [INFO] Virtual environment: %VIRTUAL_ENV%
 echo [INFO] Server will run on: %MCP_SERVER_HOST%:%MCP_SERVER_PORT%
 echo [INFO] Log level: %LOG_LEVEL%
-echo.
-echo [COMMANDS] Available commands:
-echo   - Start development server: scripts\run_dev.bat
-echo   - Run tests: scripts\run_tests.bat
-echo   - Start MCP server: python run_mcp_server.py
 echo.
 echo [TIP] To deactivate, type: deactivate
 echo [TIP] To reactivate later, run: scripts\activate.bat
