@@ -32,7 +32,14 @@ from src.device.android_reader import read_android_devices
 from src.device.ios_reader import read_ios_devices
 from src.device.windows_reader import read_windows_devices, get_all_architectures, query_devices_by_architecture
 from src.device.other_reader import read_other_devices
-from src.device.records_reader import read_records
+from src.device.records_reader import (
+    read_records, 
+    find_device_by_asset_number,
+    borrow_device,
+    return_device,
+    add_borrow_record,
+    add_return_record
+)
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -87,6 +94,16 @@ def main(
                 return await _handle_get_device_records(arguments, ctx)
             elif name == "send_notification_test":
                 return await _handle_notification_test(arguments, ctx)
+            elif name == "find_device_by_asset":
+                return await _handle_find_device_by_asset(arguments, ctx)
+            elif name == "borrow_device":
+                return await _handle_borrow_device(arguments, ctx)
+            elif name == "return_device":
+                return await _handle_return_device(arguments, ctx)
+            elif name == "add_borrow_record":
+                return await _handle_add_borrow_record(arguments, ctx)
+            elif name == "add_return_record":
+                return await _handle_add_return_record(arguments, ctx)
             else:
                 return [
                     types.TextContent(
@@ -208,6 +225,112 @@ def main(
                             "default": "设备状态更新"
                         }
                     }
+                }
+            ),
+            types.Tool(
+                name="find_device_by_asset",
+                description="根据资产编号查找设备信息",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "asset_number": {
+                            "type": "string",
+                            "description": "设备资产编号"
+                        }
+                    },
+                    "required": ["asset_number"]
+                }
+            ),
+            types.Tool(
+                name="borrow_device",
+                description="借用设备（完整流程：添加借用记录+更新设备状态）",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "asset_number": {
+                            "type": "string",
+                            "description": "设备资产编号"
+                        },
+                        "borrower": {
+                            "type": "string",
+                            "description": "借用者姓名"
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "借用原因（可选）",
+                            "default": ""
+                        }
+                    },
+                    "required": ["asset_number", "borrower"]
+                }
+            ),
+            types.Tool(
+                name="return_device",
+                description="归还设备（完整流程：添加归还记录+更新设备状态）",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "asset_number": {
+                            "type": "string",
+                            "description": "设备资产编号"
+                        },
+                        "borrower": {
+                            "type": "string",
+                            "description": "归还者姓名"
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "归还原因（可选）",
+                            "default": ""
+                        }
+                    },
+                    "required": ["asset_number", "borrower"]
+                }
+            ),
+            types.Tool(
+                name="add_borrow_record",
+                description="仅添加借用记录（不更新设备状态）",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "asset_number": {
+                            "type": "string",
+                            "description": "设备资产编号"
+                        },
+                        "borrower": {
+                            "type": "string",
+                            "description": "借用者姓名"
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "借用原因（可选）",
+                            "default": ""
+                        }
+                    },
+                    "required": ["asset_number", "borrower"]
+                }
+            ),
+            types.Tool(
+                name="add_return_record",
+                description="仅添加归还记录（不更新设备状态）",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "asset_number": {
+                            "type": "string",
+                            "description": "设备资产编号"
+                        },
+                        "borrower": {
+                            "type": "string",
+                            "description": "归还者姓名"
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "归还原因（可选）",
+                            "default": ""
+                        }
+                    },
+                    "required": ["asset_number", "borrower"]
                 }
             )
         ]
@@ -843,6 +966,282 @@ async def _handle_bug_report_template_prompt(arguments: dict[str, str]) -> types
             )
         ]
     )
+
+
+async def _handle_find_device_by_asset(arguments: dict[str, Any], ctx) -> list[types.ContentBlock]:
+    """处理根据资产编号查找设备"""
+    asset_number = arguments.get("asset_number")
+    
+    if not asset_number:
+        return [types.TextContent(type="text", text="缺少必需参数: asset_number")]
+    
+    await ctx.session.send_log_message(
+        level="info",
+        data=f"正在查找资产编号 {asset_number} 的设备...",
+        logger="asset_finder",
+        related_request_id=ctx.request_id,
+    )
+    
+    try:
+        device_info, device_type = find_device_by_asset_number(asset_number)
+        
+        if not device_info:
+            result_text = f"❌ 未找到资产编号为 '{asset_number}' 的设备\n\n"
+            result_text += "请检查资产编号是否正确，或使用 list_devices 工具查看所有可用设备。"
+        else:
+            result_text = f"✅ 找到设备信息:\n\n"
+            result_text += f"🏷️ 资产编号: {asset_number}\n"
+            result_text += f"📱 设备名称: {device_info.get('设备名称', 'N/A')}\n"
+            result_text += f"🔧 设备类型: {device_type}\n"
+            result_text += f"📋 设备状态: {device_info.get('设备状态', 'N/A')}\n"
+            result_text += f"🖥️ 设备OS: {device_info.get('设备OS', 'N/A')}\n"
+            result_text += f"🏭 品牌: {device_info.get('品牌', 'N/A')}\n"
+            result_text += f"👤 当前借用者: {device_info.get('借用者', '无')}\n"
+            result_text += f"👨‍💼 所属manager: {device_info.get('所属manager', 'N/A')}\n"
+            result_text += f"🔢 设备序列号: {device_info.get('设备序列号', 'N/A')}\n"
+            result_text += f"📅 创建日期: {device_info.get('创建日期', 'N/A')}\n"
+            
+            # 添加特殊字段
+            if device_type == "windows" and device_info.get('芯片架构'):
+                result_text += f"💻 芯片架构: {device_info.get('芯片架构', 'N/A')}\n"
+            
+            if device_type == "android" and device_info.get('类型'):
+                result_text += f"📱 类型: {device_info.get('类型', 'N/A')}\n"
+            
+            result_text += f"\n✨ 此结果来自真实设备数据 (CSV文件)"
+        
+        logger.info(f"[Asset Search] 查找资产编号 {asset_number}: {'找到' if device_info else '未找到'}")
+        return [types.TextContent(type="text", text=result_text)]
+        
+    except Exception as e:
+        logger.error(f"查找设备失败: {e}")
+        return [types.TextContent(
+            type="text", 
+            text=f"查找设备失败: {str(e)}\n请检查资产编号格式或联系管理员"
+        )]
+
+
+async def _handle_borrow_device(arguments: dict[str, Any], ctx) -> list[types.ContentBlock]:
+    """处理设备借用（完整流程）"""
+    asset_number = arguments.get("asset_number")
+    borrower = arguments.get("borrower")
+    reason = arguments.get("reason", "")
+    
+    if not asset_number or not borrower:
+        return [types.TextContent(type="text", text="缺少必需参数: asset_number 或 borrower")]
+    
+    await ctx.session.send_log_message(
+        level="info",
+        data=f"正在执行设备借用操作: 资产编号 {asset_number}, 借用者 {borrower}...",
+        logger="device_borrow",
+        related_request_id=ctx.request_id,
+    )
+    
+    try:
+        # 执行借用操作
+        success = borrow_device(asset_number, borrower, reason)
+        
+        if success:
+            result_text = f"🎉 设备借用成功！\n\n"
+            result_text += f"🏷️ 资产编号: {asset_number}\n"
+            result_text += f"👤 借用者: {borrower}\n"
+            if reason:
+                result_text += f"💬 借用原因: {reason}\n"
+            result_text += f"📅 借用时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            result_text += f"📋 设备状态: 已更新为'正在使用'\n"
+            result_text += f"📝 记录状态: 已添加到借用记录\n"
+            result_text += f"\n✨ 完整借用流程已完成 (记录+状态更新)"
+            
+            # 发送成功通知
+            await ctx.session.send_log_message(
+                level="info",
+                data=f"✅ 设备借用成功: {asset_number} -> {borrower}",
+                logger="device_borrow",
+                related_request_id=ctx.request_id,
+            )
+        else:
+            result_text = f"❌ 设备借用失败\n\n"
+            result_text += f"🏷️ 资产编号: {asset_number}\n"
+            result_text += f"👤 借用者: {borrower}\n"
+            result_text += f"❗ 可能原因:\n"
+            result_text += f"  • 资产编号不存在\n"
+            result_text += f"  • 设备已被借用\n"
+            result_text += f"  • 设备状态异常\n"
+            result_text += f"  • 系统内部错误\n"
+            result_text += f"\n💡 建议使用 find_device_by_asset 工具检查设备状态"
+        
+        logger.info(f"[Device Borrow] 资产编号 {asset_number}: {'成功' if success else '失败'}")
+        return [types.TextContent(type="text", text=result_text)]
+        
+    except Exception as e:
+        logger.error(f"设备借用失败: {e}")
+        return [types.TextContent(
+            type="text", 
+            text=f"设备借用操作失败: {str(e)}\n请检查参数或联系管理员"
+        )]
+
+
+async def _handle_return_device(arguments: dict[str, Any], ctx) -> list[types.ContentBlock]:
+    """处理设备归还（完整流程）"""
+    asset_number = arguments.get("asset_number")
+    borrower = arguments.get("borrower")
+    reason = arguments.get("reason", "")
+    
+    if not asset_number or not borrower:
+        return [types.TextContent(type="text", text="缺少必需参数: asset_number 或 borrower")]
+    
+    await ctx.session.send_log_message(
+        level="info",
+        data=f"正在执行设备归还操作: 资产编号 {asset_number}, 归还者 {borrower}...",
+        logger="device_return",
+        related_request_id=ctx.request_id,
+    )
+    
+    try:
+        # 执行归还操作
+        success = return_device(asset_number, borrower, reason)
+        
+        if success:
+            result_text = f"🎉 设备归还成功！\n\n"
+            result_text += f"🏷️ 资产编号: {asset_number}\n"
+            result_text += f"👤 归还者: {borrower}\n"
+            if reason:
+                result_text += f"💬 归还原因: {reason}\n"
+            result_text += f"📅 归还时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            result_text += f"📋 设备状态: 已更新为'可用'\n"
+            result_text += f"👤 借用者信息: 已清空\n"
+            result_text += f"📝 记录状态: 已添加到归还记录\n"
+            result_text += f"\n✨ 完整归还流程已完成 (记录+状态更新)"
+            
+            # 发送成功通知
+            await ctx.session.send_log_message(
+                level="info",
+                data=f"✅ 设备归还成功: {asset_number} <- {borrower}",
+                logger="device_return",
+                related_request_id=ctx.request_id,
+            )
+        else:
+            result_text = f"❌ 设备归还失败\n\n"
+            result_text += f"🏷️ 资产编号: {asset_number}\n"
+            result_text += f"👤 归还者: {borrower}\n"
+            result_text += f"❗ 可能原因:\n"
+            result_text += f"  • 资产编号不存在\n"
+            result_text += f"  • 设备未被借用\n"
+            result_text += f"  • 归还者与借用者不匹配\n"
+            result_text += f"  • 系统内部错误\n"
+            result_text += f"\n💡 建议使用 find_device_by_asset 工具检查设备状态"
+        
+        logger.info(f"[Device Return] 资产编号 {asset_number}: {'成功' if success else '失败'}")
+        return [types.TextContent(type="text", text=result_text)]
+        
+    except Exception as e:
+        logger.error(f"设备归还失败: {e}")
+        return [types.TextContent(
+            type="text", 
+            text=f"设备归还操作失败: {str(e)}\n请检查参数或联系管理员"
+        )]
+
+
+async def _handle_add_borrow_record(arguments: dict[str, Any], ctx) -> list[types.ContentBlock]:
+    """处理添加借用记录（仅记录）"""
+    asset_number = arguments.get("asset_number")
+    borrower = arguments.get("borrower")
+    reason = arguments.get("reason", "")
+    
+    if not asset_number or not borrower:
+        return [types.TextContent(type="text", text="缺少必需参数: asset_number 或 borrower")]
+    
+    await ctx.session.send_log_message(
+        level="info",
+        data=f"正在添加借用记录: 资产编号 {asset_number}, 借用者 {borrower}...",
+        logger="borrow_record",
+        related_request_id=ctx.request_id,
+    )
+    
+    try:
+        # 添加借用记录
+        success = add_borrow_record(asset_number, borrower, reason)
+        
+        if success:
+            result_text = f"✅ 借用记录添加成功！\n\n"
+            result_text += f"🏷️ 资产编号: {asset_number}\n"
+            result_text += f"👤 借用者: {borrower}\n"
+            if reason:
+                result_text += f"💬 借用原因: {reason}\n"
+            result_text += f"📅 记录时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            result_text += f"📝 记录状态: 已添加到records.csv\n"
+            result_text += f"⚠️ 注意: 此操作仅添加记录，不会更新设备状态\n"
+            result_text += f"\n💡 如需完整借用流程，请使用 borrow_device 工具"
+        else:
+            result_text = f"❌ 借用记录添加失败\n\n"
+            result_text += f"🏷️ 资产编号: {asset_number}\n"
+            result_text += f"👤 借用者: {borrower}\n"
+            result_text += f"❗ 可能原因:\n"
+            result_text += f"  • 资产编号不存在\n"
+            result_text += f"  • 参数格式错误\n"
+            result_text += f"  • 文件写入权限问题\n"
+            result_text += f"\n💡 建议使用 find_device_by_asset 工具检查资产编号"
+        
+        logger.info(f"[Borrow Record] 资产编号 {asset_number}: {'成功' if success else '失败'}")
+        return [types.TextContent(type="text", text=result_text)]
+        
+    except Exception as e:
+        logger.error(f"添加借用记录失败: {e}")
+        return [types.TextContent(
+            type="text", 
+            text=f"添加借用记录失败: {str(e)}\n请检查参数或联系管理员"
+        )]
+
+
+async def _handle_add_return_record(arguments: dict[str, Any], ctx) -> list[types.ContentBlock]:
+    """处理添加归还记录（仅记录）"""
+    asset_number = arguments.get("asset_number")
+    borrower = arguments.get("borrower")
+    reason = arguments.get("reason", "")
+    
+    if not asset_number or not borrower:
+        return [types.TextContent(type="text", text="缺少必需参数: asset_number 或 borrower")]
+    
+    await ctx.session.send_log_message(
+        level="info",
+        data=f"正在添加归还记录: 资产编号 {asset_number}, 归还者 {borrower}...",
+        logger="return_record",
+        related_request_id=ctx.request_id,
+    )
+    
+    try:
+        # 添加归还记录
+        success = add_return_record(asset_number, borrower, reason)
+        
+        if success:
+            result_text = f"✅ 归还记录添加成功！\n\n"
+            result_text += f"🏷️ 资产编号: {asset_number}\n"
+            result_text += f"👤 归还者: {borrower}\n"
+            if reason:
+                result_text += f"💬 归还原因: {reason}\n"
+            result_text += f"📅 记录时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            result_text += f"📝 记录状态: 已添加到records.csv\n"
+            result_text += f"⚠️ 注意: 此操作仅添加记录，不会更新设备状态\n"
+            result_text += f"\n💡 如需完整归还流程，请使用 return_device 工具"
+        else:
+            result_text = f"❌ 归还记录添加失败\n\n"
+            result_text += f"🏷️ 资产编号: {asset_number}\n"
+            result_text += f"👤 归还者: {borrower}\n"
+            result_text += f"❗ 可能原因:\n"
+            result_text += f"  • 资产编号不存在\n"
+            result_text += f"  • 参数格式错误\n"
+            result_text += f"  • 文件写入权限问题\n"
+            result_text += f"\n💡 建议使用 find_device_by_asset 工具检查资产编号"
+        
+        logger.info(f"[Return Record] 资产编号 {asset_number}: {'成功' if success else '失败'}")
+        return [types.TextContent(type="text", text=result_text)]
+        
+    except Exception as e:
+        logger.error(f"添加归还记录失败: {e}")
+        return [types.TextContent(
+            type="text", 
+            text=f"添加归还记录失败: {str(e)}\n请检查参数或联系管理员"
+        )]
 
 
 if __name__ == "__main__":

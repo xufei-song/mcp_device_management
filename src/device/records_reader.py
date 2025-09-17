@@ -10,10 +10,10 @@ from pathlib import Path
 from datetime import datetime
 
 # 导入其他设备读取器
-from android_reader import read_android_devices
-from ios_reader import read_ios_devices  
-from windows_reader import read_windows_devices
-from other_reader import read_other_devices
+from .android_reader import read_android_devices
+from .ios_reader import read_ios_devices  
+from .windows_reader import read_windows_devices
+from .other_reader import read_other_devices
 
 
 def read_records():
