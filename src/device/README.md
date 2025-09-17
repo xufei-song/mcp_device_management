@@ -149,7 +149,7 @@ arm64_devices = query_devices_by_architecture('arm64')
 
 ---
 
-### 5. 记录读取器 (`records_reader.py`)
+### 5. 记录读取器 (`records_reader.py`) ⭐ **增强功能**
 
 #### `read_records()`
 读取记录CSV文件并返回所有借用/归还记录。
@@ -168,6 +168,115 @@ records = read_records()
 # 查看最近的借用记录
 recent_borrows = [r for r in records if r['状态'] == '借用']
 ```
+
+#### `find_device_by_asset_number(asset_number)` 🆕
+根据资产编号在所有设备表中查找设备信息。
+
+**参数：**
+- `asset_number` (str): 资产编号
+
+**返回值：**
+- `tuple`: (device_info, device_type) 设备信息和设备类型，未找到返回 (None, None)
+
+**异常：**
+- `ValueError`: 资产编号为空
+- `Exception`: 读取文件错误
+
+**使用示例：**
+```python
+from src.device.records_reader import find_device_by_asset_number
+
+device_info, device_type = find_device_by_asset_number('18294886')
+if device_info:
+    print(f"设备名称: {device_info['设备名称']}")
+    print(f"设备类型: {device_type}")
+    print(f"当前状态: {device_info['设备状态']}")
+```
+
+#### `borrow_device(asset_number, borrower, reason="")` 🆕
+完整的设备借用流程（添加借用记录 + 更新设备状态）。
+
+**参数：**
+- `asset_number` (str): 资产编号
+- `borrower` (str): 借用者
+- `reason` (str): 借用原因（可选）
+
+**返回值：**
+- `bool`: 是否成功
+
+**功能：**
+1. 在records.csv中添加借用记录
+2. 在原设备CSV文件中更新设备状态为"正在使用"
+3. 更新设备的借用者信息
+
+**使用示例：**
+```python
+from src.device.records_reader import borrow_device
+
+# 借用设备
+success = borrow_device('18294886', 'xufeisong', '开发测试需要')
+if success:
+    print("设备借用成功")
+```
+
+#### `return_device(asset_number, borrower, reason="")` 🆕
+完整的设备归还流程（添加归还记录 + 更新设备状态）。
+
+**参数：**
+- `asset_number` (str): 资产编号
+- `borrower` (str): 归还者
+- `reason` (str): 归还原因（可选）
+
+**返回值：**
+- `bool`: 是否成功
+
+**功能：**
+1. 在records.csv中添加归还记录
+2. 在原设备CSV文件中更新设备状态为"可用"
+3. 清空设备的借用者信息
+
+**使用示例：**
+```python
+from src.device.records_reader import return_device
+
+# 归还设备
+success = return_device('18294886', 'xufeisong', '测试完成')
+if success:
+    print("设备归还成功")
+```
+
+#### `add_borrow_record(asset_number, borrower, reason="")` 🆕
+仅添加借用记录到records.csv（不更新设备状态）。
+
+**参数：**
+- `asset_number` (str): 资产编号
+- `borrower` (str): 借用者
+- `reason` (str): 借用原因（可选）
+
+**返回值：**
+- `bool`: 是否成功
+
+#### `add_return_record(asset_number, borrower, reason="")` 🆕
+仅添加归还记录到records.csv（不更新设备状态）。
+
+**参数：**
+- `asset_number` (str): 资产编号
+- `borrower` (str): 归还者
+- `reason` (str): 归还原因（可选）
+
+**返回值：**
+- `bool`: 是否成功
+
+#### `update_device_status_in_csv(asset_number, new_status, new_borrower="")` 🆕
+更新设备在原始CSV文件中的状态和借用者信息。
+
+**参数：**
+- `asset_number` (str): 资产编号
+- `new_status` (str): 新状态（可用/正在使用/设备异常等）
+- `new_borrower` (str): 新借用者（归还时为空）
+
+**返回值：**
+- `bool`: 是否成功
 
 ---
 
@@ -188,16 +297,25 @@ python src/device/windows_reader.py query x64
 python src/device/windows_reader.py query arm64
 ```
 
-### 其他设备读取命令
+### 记录管理命令
 ```bash
-# 读取各类设备
-python src/device/android_reader.py
-python src/device/ios_reader.py
-python src/device/other_reader.py
+# 读取借用/归还记录
 python src/device/records_reader.py
 
-# 运行所有读取器测试
-python src/device/test_all_readers.py
+# 测试完整的借用/归还功能
+python src/device/test_borrow_return.py
+```
+
+### 设备借用/归还API
+```bash
+# 在Python脚本中使用
+from src.device.records_reader import borrow_device, return_device
+
+# 借用设备
+borrow_device('18294886', 'username', '借用原因')
+
+# 归还设备  
+return_device('18294886', 'username', '归还原因')
 ```
 
 ---
@@ -210,9 +328,27 @@ python src/device/test_all_readers.py
 | iOS | `ios_devices.csv` | 60条 | 基础读取 |
 | Windows | `windows_devices.csv` | 31条 | **架构查询** |
 | 其他设备 | `other_devices.csv` | 11条 | 基础读取 |
-| 记录 | `records.csv` | 17条 | 借用记录 |
+| 记录 | `records.csv` | 17条+ | **借用记录 + 设备管理** |
 
 ## 🔍 高级查询示例
+
+### 设备借用/归还管理
+```python
+from src.device.records_reader import borrow_device, return_device, find_device_by_asset_number
+
+# 查找设备信息
+device_info, device_type = find_device_by_asset_number('18294886')
+if device_info:
+    print(f"设备: {device_info['设备名称']}")
+    print(f"状态: {device_info['设备状态']}")
+    print(f"当前借用者: {device_info['借用者']}")
+
+# 借用设备（完整流程）
+success = borrow_device('18294886', 'xufeisong', '开发测试')
+
+# 归还设备（完整流程）  
+success = return_device('18294886', 'xufeisong', '测试完成')
+```
 
 ### 设备可用性查询
 ```python
@@ -316,14 +452,17 @@ def validate_device_data(devices):
 
 ## 🔮 未来扩展
 
+- [x] 添加设备借用/归还记录管理接口
+- [x] 支持跨设备表的资产编号查找
+- [x] 添加设备状态更新功能
 - [ ] 添加设备数据缓存机制
 - [ ] 支持设备数据修改接口
 - [ ] 添加更多设备筛选条件
 - [ ] 支持Excel文件格式
-- [ ] 添加设备借用/归还接口
 - [ ] 支持设备数据导出功能
+- [ ] 添加设备使用历史统计
 
 ---
 
-**最后更新**: 2025年9月16日  
-**版本**: v1.1 (新增Windows芯片架构查询功能)
+**最后更新**: 2025年9月17日  
+**版本**: v1.2 (新增借用/归还记录管理功能)

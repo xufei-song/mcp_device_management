@@ -5,8 +5,10 @@
 
 import contextlib
 import logging
+import sys
 from collections.abc import AsyncIterator
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import anyio
@@ -20,6 +22,17 @@ from starlette.routing import Mount
 from starlette.types import Receive, Scope, Send
 
 from .event_store import InMemoryEventStore
+
+# 导入device模块
+current_dir = Path(__file__).parent
+project_root = current_dir.parent.parent
+sys.path.append(str(project_root))
+
+from src.device.android_reader import read_android_devices
+from src.device.ios_reader import read_ios_devices
+from src.device.windows_reader import read_windows_devices, get_all_architectures, query_devices_by_architecture
+from src.device.other_reader import read_other_devices
+from src.device.records_reader import read_records
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -66,6 +79,12 @@ def main(
                 return await _handle_get_device_info(arguments, ctx)
             elif name == "list_devices":
                 return await _handle_list_devices(arguments, ctx)
+            elif name == "get_windows_architectures":
+                return await _handle_get_windows_architectures(arguments, ctx)
+            elif name == "query_devices_by_architecture":
+                return await _handle_query_devices_by_architecture(arguments, ctx)
+            elif name == "get_device_records":
+                return await _handle_get_device_records(arguments, ctx)
             elif name == "send_notification_test":
                 return await _handle_notification_test(arguments, ctx)
             else:
@@ -98,7 +117,7 @@ def main(
                     "properties": {
                         "device_id": {
                             "type": "string",
-                            "description": "设备ID，如emulator-5554"
+                            "description": "设备ID或设备名称"
                         },
                         "device_type": {
                             "type": "string",
@@ -117,14 +136,51 @@ def main(
                     "properties": {
                         "device_type": {
                             "type": "string",
-                            "enum": ["android", "ios", "windows", "all"],
+                            "enum": ["android", "ios", "windows", "other", "all"],
                             "description": "过滤设备类型",
                             "default": "all"
                         },
                         "status": {
                             "type": "string",
                             "enum": ["online", "offline", "all"],
-                            "description": "过滤设备状态",
+                            "description": "过滤设备状态 (online=可用, offline=其他状态)",
+                            "default": "all"
+                        }
+                    }
+                }
+            ),
+            types.Tool(
+                name="get_windows_architectures",
+                description="获取所有Windows设备的芯片架构列表",
+                inputSchema={
+                    "type": "object",
+                    "properties": {}
+                }
+            ),
+            types.Tool(
+                name="query_devices_by_architecture",
+                description="根据芯片架构查询Windows设备",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "architecture": {
+                            "type": "string",
+                            "description": "芯片架构，如x64或arm64"
+                        }
+                    },
+                    "required": ["architecture"]
+                }
+            ),
+            types.Tool(
+                name="get_device_records",
+                description="获取设备借用/归还记录",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "record_type": {
+                            "type": "string",
+                            "enum": ["all", "借用", "归还"],
+                            "description": "记录类型过滤",
                             "default": "all"
                         }
                     }
@@ -295,7 +351,7 @@ async def _handle_get_device_info(arguments: dict[str, Any], ctx) -> list[types.
     if not device_id or not device_type:
         return [types.TextContent(type="text", text="缺少必需参数: device_id 或 device_type")]
     
-    # 发送日志通知（使用SDK的通知功能）
+    # 发送日志通知
     await ctx.session.send_log_message(
         level="info",
         data=f"正在获取设备 {device_id} 的信息...",
@@ -303,40 +359,68 @@ async def _handle_get_device_info(arguments: dict[str, Any], ctx) -> list[types.
         related_request_id=ctx.request_id,
     )
     
-    # Mock设备信息
-    mock_device_info = {
-        "device_id": device_id,
-        "device_type": device_type,
-        "status": "online",
-        "model": f"SDK_Mock_{device_type.upper()}_Device",
-        "os_version": "SDK_Mock_OS_2.0",
-        "screen_resolution": "1080x1920",
-        "cpu_usage": "12%",
-        "memory_usage": "58%",
-        "last_update": datetime.now().isoformat(),
-        "capabilities": [
-            "screenshot", "app_install", "app_uninstall", 
-            "input_simulation", "log_collection", "performance_monitoring"
-        ]
-    }
-    
-    result_text = f"""设备信息获取成功 (SDK版本):
-设备ID: {mock_device_info['device_id']}
-设备类型: {mock_device_info['device_type']}
-状态: {mock_device_info['status']}
-型号: {mock_device_info['model']}
-系统版本: {mock_device_info['os_version']}
-屏幕分辨率: {mock_device_info['screen_resolution']}
-CPU使用率: {mock_device_info['cpu_usage']}
-内存使用率: {mock_device_info['memory_usage']}
-最后更新: {mock_device_info['last_update']}
-支持功能: {', '.join(mock_device_info['capabilities'])}
+    try:
+        # 根据设备类型读取真实设备数据
+        devices = []
+        if device_type == "android":
+            devices = read_android_devices()
+        elif device_type == "ios":
+            devices = read_ios_devices()
+        elif device_type == "windows":
+            devices = read_windows_devices()
+        else:
+            return [types.TextContent(type="text", text=f"不支持的设备类型: {device_type}")]
+        
+        # 查找指定设备
+        device_info = None
+        for device in devices:
+            # 根据设备名称或序列号匹配
+            if (device.get('设备名称') == device_id or 
+                device.get('设备序列号') == device_id or
+                device_id in str(device.get('设备名称', ''))):
+                device_info = device
+                break
+        
+        if not device_info:
+            return [types.TextContent(
+                type="text", 
+                text=f"未找到设备: {device_id} (类型: {device_type})\n可用设备数量: {len(devices)}"
+            )]
+        
+        # 格式化设备信息
+        result_text = f"""设备信息获取成功:
+设备名称: {device_info.get('设备名称', 'N/A')}
+设备类型: {device_type}
+设备状态: {device_info.get('设备状态', 'N/A')}
+设备OS: {device_info.get('设备OS', 'N/A')}
+设备序列号: {device_info.get('设备序列号', 'N/A')}
+SKU: {device_info.get('SKU', 'N/A')}
+品牌: {device_info.get('品牌', 'N/A')}
+借用者: {device_info.get('借用者', '无')}
+所属manager: {device_info.get('所属manager', 'N/A')}
+资产编号: {device_info.get('资产编号', 'N/A')}
+是否盘点: {device_info.get('是否盘点', 'N/A')}
+创建日期: {device_info.get('创建日期', 'N/A')}"""
 
-✨ 此结果由官方MCP SDK StreamableHTTP生成
-"""
-    
-    logger.info(f"[SDK] 返回设备信息: {device_id}")
-    return [types.TextContent(type="text", text=result_text)]
+        # 添加Windows特有字段
+        if device_type == "windows" and device_info.get('芯片架构'):
+            result_text += f"\n芯片架构: {device_info.get('芯片架构', 'N/A')}"
+        
+        # 添加Android特有字段
+        if device_type == "android" and device_info.get('类型'):
+            result_text += f"\n类型: {device_info.get('类型', 'N/A')}"
+        
+        result_text += f"\n\n✨ 此结果来自真实设备数据 (CSV文件)"
+        
+        logger.info(f"[Real Data] 返回设备信息: {device_info.get('设备名称')}")
+        return [types.TextContent(type="text", text=result_text)]
+        
+    except Exception as e:
+        logger.error(f"读取设备信息失败: {e}")
+        return [types.TextContent(
+            type="text", 
+            text=f"读取设备信息失败: {str(e)}\n请检查设备数据文件是否存在"
+        )]
 
 
 async def _handle_list_devices(arguments: dict[str, Any], ctx) -> list[types.ContentBlock]:
@@ -352,62 +436,99 @@ async def _handle_list_devices(arguments: dict[str, Any], ctx) -> list[types.Con
         related_request_id=ctx.request_id,
     )
     
-    # Mock设备列表
-    mock_devices = [
-        {
-            "device_id": "sdk-emulator-5554",
-            "device_type": "android",
-            "status": "online",
-            "model": "SDK_Android_Emulator_API_34",
-            "os_version": "Android 14 (SDK)"
-        },
-        {
-            "device_id": "sdk-emulator-5556",
-            "device_type": "android", 
-            "status": "offline",
-            "model": "SDK_Android_Emulator_API_33",
-            "os_version": "Android 13 (SDK)"
-        },
-        {
-            "device_id": "sdk-ios-simulator-1",
-            "device_type": "ios",
-            "status": "online",
-            "model": "SDK_iPhone_15_Pro_Simulator",
-            "os_version": "iOS 17.0 (SDK)"
-        },
-        {
-            "device_id": "sdk-windows-vm-1",
-            "device_type": "windows",
-            "status": "online",
-            "model": "SDK_Windows_VM",
-            "os_version": "Windows 11 (SDK)"
-        }
-    ]
-    
-    # 过滤设备
-    if device_type != "all":
-        mock_devices = [d for d in mock_devices if d["device_type"] == device_type]
-    if status != "all":
-        mock_devices = [d for d in mock_devices if d["status"] == status]
-    
-    result_text = f"设备列表 (SDK版本) - 类型: {device_type}, 状态: {status}:\n\n"
-    
-    for device in mock_devices:
-        result_text += f"• 设备ID: {device['device_id']}\n"
-        result_text += f"  类型: {device['device_type']}\n"
-        result_text += f"  状态: {device['status']}\n"
-        result_text += f"  型号: {device['model']}\n"
-        result_text += f"  系统: {device['os_version']}\n\n"
-    
-    if not mock_devices:
-        result_text += "未找到符合条件的设备。\n"
-    else:
-        result_text += f"共找到 {len(mock_devices)} 个设备。\n"
-    
-    result_text += "\n✨ 此结果由官方MCP SDK StreamableHTTP生成"
-    
-    logger.info(f"[SDK] 返回设备列表: {len(mock_devices)}个设备")
-    return [types.TextContent(type="text", text=result_text)]
+    try:
+        all_devices = []
+        
+        # 读取各类型设备
+        if device_type == "all" or device_type == "android":
+            android_devices = read_android_devices()
+            for device in android_devices:
+                device['device_type'] = 'android'
+                all_devices.append(device)
+        
+        if device_type == "all" or device_type == "ios":
+            ios_devices = read_ios_devices()
+            for device in ios_devices:
+                device['device_type'] = 'ios'
+                all_devices.append(device)
+        
+        if device_type == "all" or device_type == "windows":
+            windows_devices = read_windows_devices()
+            for device in windows_devices:
+                device['device_type'] = 'windows'
+                all_devices.append(device)
+        
+        if device_type == "all" or device_type == "other":
+            other_devices = read_other_devices()
+            for device in other_devices:
+                device['device_type'] = 'other'
+                all_devices.append(device)
+        
+        # 状态过滤
+        if status != "all":
+            if status == "online":
+                # 将"可用"状态映射为"online"
+                all_devices = [d for d in all_devices if d.get('设备状态') == '可用']
+            elif status == "offline":
+                # 将非"可用"状态映射为"offline"
+                all_devices = [d for d in all_devices if d.get('设备状态') != '可用']
+        
+        # 格式化结果
+        result_text = f"设备列表 - 类型: {device_type}, 状态: {status}:\n\n"
+        
+        if not all_devices:
+            result_text += "未找到符合条件的设备。\n"
+        else:
+            # 按设备类型分组显示
+            device_groups = {}
+            for device in all_devices:
+                dtype = device.get('device_type', 'unknown')
+                if dtype not in device_groups:
+                    device_groups[dtype] = []
+                device_groups[dtype].append(device)
+            
+            for dtype, devices in device_groups.items():
+                result_text += f"📱 {dtype.upper()} 设备 ({len(devices)}台):\n"
+                for device in devices:
+                    device_name = device.get('设备名称', 'N/A')
+                    device_status = device.get('设备状态', 'N/A')
+                    device_os = device.get('设备OS', 'N/A')
+                    borrower = device.get('借用者', '无')
+                    
+                    result_text += f"  • {device_name}\n"
+                    result_text += f"    状态: {device_status} | 系统: {device_os}\n"
+                    result_text += f"    借用者: {borrower}\n"
+                    
+                    # 添加特殊字段
+                    if dtype == "windows" and device.get('芯片架构'):
+                        result_text += f"    架构: {device.get('芯片架构')}\n"
+                    elif dtype == "android" and device.get('类型'):
+                        result_text += f"    类型: {device.get('类型')}\n"
+                    
+                    result_text += "\n"
+                result_text += "\n"
+        
+        # 统计信息
+        total_count = len(all_devices)
+        available_count = sum(1 for d in all_devices if d.get('设备状态') == '可用')
+        in_use_count = sum(1 for d in all_devices if d.get('设备状态') == '正在使用')
+        
+        result_text += f"📊 统计信息:\n"
+        result_text += f"总设备数: {total_count}\n"
+        result_text += f"可用设备: {available_count}\n"
+        result_text += f"使用中设备: {in_use_count}\n"
+        result_text += f"其他状态: {total_count - available_count - in_use_count}\n"
+        result_text += f"\n✨ 此结果来自真实设备数据 (CSV文件)"
+        
+        logger.info(f"[Real Data] 返回设备列表: {total_count}个设备")
+        return [types.TextContent(type="text", text=result_text)]
+        
+    except Exception as e:
+        logger.error(f"读取设备列表失败: {e}")
+        return [types.TextContent(
+            type="text", 
+            text=f"读取设备列表失败: {str(e)}\n请检查设备数据文件是否存在"
+        )]
 
 
 async def _handle_notification_test(arguments: dict[str, Any], ctx) -> list[types.ContentBlock]:
@@ -436,6 +557,162 @@ async def _handle_notification_test(arguments: dict[str, Any], ctx) -> list[type
             text=f"✅ SDK通知测试完成: 发送了 {count} 个通知，间隔 {interval}秒\n\n通知内容: {message}\n\n✨ 使用官方MCP SDK StreamableHTTP实时通知功能",
         )
     ]
+
+
+async def _handle_get_windows_architectures(arguments: dict[str, Any], ctx) -> list[types.ContentBlock]:
+    """处理获取Windows架构列表"""
+    await ctx.session.send_log_message(
+        level="info",
+        data="正在获取Windows设备架构列表...",
+        logger="windows_architecture",
+        related_request_id=ctx.request_id,
+    )
+    
+    try:
+        architectures = get_all_architectures()
+        
+        result_text = f"Windows设备芯片架构列表:\n\n"
+        for i, arch in enumerate(architectures, 1):
+            result_text += f"{i}. {arch}\n"
+        
+        result_text += f"\n共找到 {len(architectures)} 种架构"
+        result_text += f"\n\n✨ 此结果来自真实Windows设备数据 (CSV文件)"
+        
+        logger.info(f"[Real Data] 返回Windows架构: {len(architectures)}种")
+        return [types.TextContent(type="text", text=result_text)]
+        
+    except Exception as e:
+        logger.error(f"获取Windows架构失败: {e}")
+        return [types.TextContent(
+            type="text", 
+            text=f"获取Windows架构失败: {str(e)}\n请检查Windows设备数据文件是否存在"
+        )]
+
+
+async def _handle_query_devices_by_architecture(arguments: dict[str, Any], ctx) -> list[types.ContentBlock]:
+    """处理按架构查询Windows设备"""
+    architecture = arguments.get("architecture")
+    
+    if not architecture:
+        return [types.TextContent(type="text", text="缺少必需参数: architecture")]
+    
+    await ctx.session.send_log_message(
+        level="info",
+        data=f"正在查询架构为 {architecture} 的Windows设备...",
+        logger="architecture_query",
+        related_request_id=ctx.request_id,
+    )
+    
+    try:
+        devices = query_devices_by_architecture(architecture)
+        
+        result_text = f"架构 '{architecture}' 的Windows设备:\n\n"
+        
+        if not devices:
+            result_text += f"未找到架构为 '{architecture}' 的设备。\n"
+            # 显示可用架构
+            all_archs = get_all_architectures()
+            result_text += f"\n可用架构: {', '.join(all_archs)}"
+        else:
+            for i, device in enumerate(devices, 1):
+                device_name = device.get('设备名称', 'N/A')
+                device_status = device.get('设备状态', 'N/A')
+                device_os = device.get('设备OS', 'N/A')
+                borrower = device.get('借用者', '无')
+                sku = device.get('SKU', 'N/A')
+                
+                result_text += f"{i}. {device_name}\n"
+                result_text += f"   状态: {device_status}\n"
+                result_text += f"   系统: {device_os}\n"
+                result_text += f"   SKU: {sku}\n"
+                result_text += f"   借用者: {borrower}\n"
+                result_text += f"   架构: {device.get('芯片架构', 'N/A')}\n\n"
+            
+            # 统计信息
+            available_count = sum(1 for d in devices if d.get('设备状态') == '可用')
+            in_use_count = sum(1 for d in devices if d.get('设备状态') == '正在使用')
+            
+            result_text += f"📊 {architecture} 架构统计:\n"
+            result_text += f"总设备数: {len(devices)}\n"
+            result_text += f"可用设备: {available_count}\n"
+            result_text += f"使用中设备: {in_use_count}\n"
+        
+        result_text += f"\n✨ 此结果来自真实Windows设备数据 (CSV文件)"
+        
+        logger.info(f"[Real Data] 返回架构'{architecture}'设备: {len(devices)}台")
+        return [types.TextContent(type="text", text=result_text)]
+        
+    except Exception as e:
+        logger.error(f"按架构查询设备失败: {e}")
+        return [types.TextContent(
+            type="text", 
+            text=f"按架构查询设备失败: {str(e)}\n请检查Windows设备数据文件是否存在"
+        )]
+
+
+async def _handle_get_device_records(arguments: dict[str, Any], ctx) -> list[types.ContentBlock]:
+    """处理获取设备记录"""
+    record_type = arguments.get("record_type", "all")
+    
+    await ctx.session.send_log_message(
+        level="info",
+        data=f"正在获取设备记录 (类型: {record_type})...",
+        logger="device_records",
+        related_request_id=ctx.request_id,
+    )
+    
+    try:
+        records = read_records()
+        
+        # 过滤记录类型
+        if record_type != "all":
+            records = [r for r in records if r.get('状态') == record_type]
+        
+        result_text = f"设备借用/归还记录 (类型: {record_type}):\n\n"
+        
+        if not records:
+            result_text += "未找到符合条件的记录。\n"
+        else:
+            # 按状态分组
+            borrow_records = [r for r in records if r.get('状态') == '借用']
+            return_records = [r for r in records if r.get('状态') == '归还']
+            
+            if record_type == "all" or record_type == "借用":
+                result_text += f"📝 借用记录 ({len(borrow_records)}条):\n"
+                for i, record in enumerate(borrow_records, 1):
+                    result_text += f"{i}. 借用者: {record.get('借用者', 'N/A')}\n"
+                    result_text += f"   设备: {record.get('设备', 'N/A')}\n"
+                    result_text += f"   资产编号: {record.get('资产编号', 'N/A')}\n"
+                    result_text += f"   创建日期: {record.get('创建日期', 'N/A')}\n"
+                    result_text += f"   原因: {record.get('原因', 'N/A')}\n\n"
+                result_text += "\n"
+            
+            if record_type == "all" or record_type == "归还":
+                result_text += f"📤 归还记录 ({len(return_records)}条):\n"
+                for i, record in enumerate(return_records, 1):
+                    result_text += f"{i}. 归还者: {record.get('借用者', 'N/A')}\n"
+                    result_text += f"   设备: {record.get('设备', 'N/A')}\n"
+                    result_text += f"   资产编号: {record.get('资产编号', 'N/A')}\n"
+                    result_text += f"   创建日期: {record.get('创建日期', 'N/A')}\n"
+                    result_text += f"   原因: {record.get('原因', 'N/A')}\n\n"
+            
+            # 统计信息
+            result_text += f"📊 记录统计:\n"
+            result_text += f"总记录数: {len(records)}\n"
+            result_text += f"借用记录: {len(borrow_records)}\n"
+            result_text += f"归还记录: {len(return_records)}\n"
+        
+        result_text += f"\n✨ 此结果来自真实设备记录数据 (CSV文件)"
+        
+        logger.info(f"[Real Data] 返回设备记录: {len(records)}条")
+        return [types.TextContent(type="text", text=result_text)]
+        
+    except Exception as e:
+        logger.error(f"获取设备记录失败: {e}")
+        return [types.TextContent(
+            type="text", 
+            text=f"获取设备记录失败: {str(e)}\n请检查设备记录文件是否存在"
+        )]
 
 
 # 提示实现函数
