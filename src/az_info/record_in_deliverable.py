@@ -70,10 +70,11 @@ def record_in_deliverable(comment_text):
         comment_text (str): 要添加到deliverable discussion中的评论内容
     
     Returns:
-        bool: 成功返回True，失败返回False
+        tuple: 成功返回(True, user_email)，失败返回(False, None)
     """
     azure_devops_client = None
     login_successful = False
+    user_email = None
     
     try:
         print("[INFO] Initializing Azure connection...")
@@ -82,23 +83,30 @@ def record_in_deliverable(comment_text):
         az_path = check_azure_cli()
         if not az_path:
             print("[ERROR] Azure CLI not found!")
-            return False
+            return False, None
         
         # Step 2: Login
         login_result = az_login()
         if login_result is None:
             print("[ERROR] Azure login failed!")
-            return False
+            return False, None
         
         login_successful = True  # 标记登录成功
         
-        # Step 3: Get token
+        # Step 3: Get user email
+        user_email = get_user_email()
+        if user_email:
+            print(f"[INFO] Current user email: {user_email}")
+        else:
+            print("[WARNING] Failed to get user email, but continuing...")
+        
+        # Step 4: Get token
         token = get_azure_token()
         if not token:
             print("[ERROR] Failed to get Azure token!")
-            return False
+            return False, None
         
-        # Step 4: Create client
+        # Step 5: Create client
         azure_devops_client = AzureDevOpsClient(personal_access_token=token)
         print("[SUCCESS] Azure connection initialized!")
         
@@ -115,14 +123,14 @@ def record_in_deliverable(comment_text):
         
         if success:
             print(f"[SUCCESS] Comment recorded successfully: {comment_text}")
-            return True
+            return True, user_email
         else:
             print(f"[ERROR] Failed to record comment: {comment_text}")
-            return False
+            return False, None
             
     except Exception as e:
         print(f"[ERROR] Exception while recording comment: {e}")
-        return False
+        return False, None
         
     finally:
         # 清理：如果登录成功，执行登出
@@ -141,10 +149,12 @@ def main():
     
     # Test the record_in_deliverable interface
     test_comment = "this is test"
-    success = record_in_deliverable(test_comment)
+    success, user_email = record_in_deliverable(test_comment)
     
     if success:
         print(f"\n[SUCCESS] Test completed successfully!")
+        if user_email:
+            print(f"[INFO] User email: {user_email}")
         return 0
     else:
         print(f"\n[ERROR] Test failed!")

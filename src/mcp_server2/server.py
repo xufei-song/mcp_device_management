@@ -871,13 +871,23 @@ async def _handle_borrow_device(arguments: dict[str, Any], ctx) -> list[types.Co
     try:
         # 记录到Azure DevOps deliverable
         comment_text = f"borrow {asset_number}"
-        devops_success = record_in_deliverable(comment_text)
+        devops_success, user_email = record_in_deliverable(comment_text)
         
         if not devops_success:
             return [types.TextContent(
                 type="text", 
                 text=f"❌ Azure DevOps记录失败，无法继续借用操作\n资产编号: {asset_number}\n请检查Azure连接或联系管理员"
             )]
+        
+        # 如果获取到用户邮箱，使用邮箱作为借用者
+        if user_email:
+            borrower = user_email
+            await ctx.session.send_log_message(
+                level="info",
+                data=f"使用Azure用户邮箱作为借用者: {borrower}",
+                logger="azure_devops_record",
+                related_request_id=ctx.request_id,
+            )
         
         await ctx.session.send_log_message(
             level="info",
@@ -964,13 +974,23 @@ async def _handle_return_device(arguments: dict[str, Any], ctx) -> list[types.Co
     try:
         # 记录到Azure DevOps deliverable
         comment_text = f"return {asset_number}"
-        devops_success = record_in_deliverable(comment_text)
+        devops_success, user_email = record_in_deliverable(comment_text)
         
         if not devops_success:
             return [types.TextContent(
                 type="text", 
                 text=f"❌ Azure DevOps记录失败，无法继续归还操作\n资产编号: {asset_number}\n请检查Azure连接或联系管理员"
             )]
+        
+        # 如果获取到用户邮箱，使用邮箱作为归还者
+        if user_email:
+            borrower = user_email
+            await ctx.session.send_log_message(
+                level="info",
+                data=f"使用Azure用户邮箱作为归还者: {borrower}",
+                logger="azure_devops_record",
+                related_request_id=ctx.request_id,
+            )
         
         await ctx.session.send_log_message(
             level="info",
