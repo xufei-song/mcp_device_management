@@ -604,10 +604,15 @@ async def _handle_list_devices(arguments: dict[str, Any], ctx) -> list[types.Con
                     device_status = device.get('设备状态', 'N/A')
                     device_os = device.get('设备OS', 'N/A')
                     borrower = device.get('借用者', '无')
+                    asset_number = device.get('资产编号', '')  # 获取资产编号，没有则为空字符串
                     
                     result_text += f"  • {device_name}\n"
                     result_text += f"    状态: {device_status} | 系统: {device_os}\n"
                     result_text += f"    借用者: {borrower}\n"
+                    
+                    # 添加资产编号（如果存在）
+                    if asset_number and asset_number.strip():
+                        result_text += f"    资产编号: {asset_number}\n"
                     
                     # 添加特殊字段
                     if dtype == "windows" and device.get('芯片架构'):
@@ -702,13 +707,20 @@ async def _handle_query_devices_by_architecture(arguments: dict[str, Any], ctx) 
                 device_os = device.get('设备OS', 'N/A')
                 borrower = device.get('借用者', '无')
                 sku = device.get('SKU', 'N/A')
+                asset_number = device.get('资产编号', '')  # 获取资产编号
                 
                 result_text += f"{i}. {device_name}\n"
                 result_text += f"   状态: {device_status}\n"
                 result_text += f"   系统: {device_os}\n"
                 result_text += f"   SKU: {sku}\n"
                 result_text += f"   借用者: {borrower}\n"
-                result_text += f"   架构: {device.get('芯片架构', 'N/A')}\n\n"
+                result_text += f"   架构: {device.get('芯片架构', 'N/A')}\n"
+                
+                # 添加资产编号（如果存在）
+                if asset_number and asset_number.strip():
+                    result_text += f"   资产编号: {asset_number}\n"
+                
+                result_text += "\n"
             
             # 统计信息
             available_count = sum(1 for d in devices if d.get('设备状态') == '可用')
