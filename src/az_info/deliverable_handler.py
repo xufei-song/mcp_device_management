@@ -165,3 +165,71 @@ class AzureDevOpsClient:
                     print(f"     Attributes: {relation['attributes']}")
         
         print("=" * 60)
+
+    def add_comment_to_deliverable(self, deliverable_id, comment_text, project='OS'):
+        """
+        Add a comment to the deliverable's Discussion
+        
+        Args:
+            deliverable_id (int): The ID of the deliverable to update
+            comment_text (str): The comment text to add
+            project (str): The project name (default: 'OS')
+        
+        Returns:
+            Boolean indicating success/failure
+        """
+        try:
+            # Create patch document to add comment
+            patch_document = [
+                JsonPatchOperation(
+                    op='add',
+                    path='/fields/System.History',
+                    value=comment_text
+                )
+            ]
+            
+            # Update the work item with the comment
+            updated_work_item = self.work_item_tracking_client.update_work_item(
+                document=patch_document,
+                id=deliverable_id,
+                project=project
+            )
+            
+            print(f"[SUCCESS] Comment added to deliverable {deliverable_id}")
+            print(f"Comment: {comment_text}")
+            return True
+            
+        except Exception as e:
+            print(f"[ERROR] Failed to add comment to deliverable {deliverable_id}: {e}")
+            return False
+
+    def update_deliverable_with_comment(self, deliverable_id, comment_text, project='OS'):
+        """
+        Update deliverable and add comment in Discussion
+        
+        Args:
+            deliverable_id (int): The ID of the deliverable to update
+            comment_text (str): The comment text to add to Discussion
+            project (str): The project name (default: 'OS')
+        
+        Returns:
+            Boolean indicating success/failure
+        """
+        print(f"[INFO] Updating deliverable {deliverable_id} with comment...")
+        
+        # First, verify the deliverable exists
+        work_item = self.get_work_item(deliverable_id, project)
+        if not work_item:
+            print(f"[ERROR] Deliverable {deliverable_id} not found")
+            return False
+        
+        print(f"[INFO] Found deliverable: {work_item.fields.get('System.Title', 'N/A')}")
+        
+        # Add comment to Discussion
+        success = self.add_comment_to_deliverable(deliverable_id, comment_text, project)
+        
+        if success:
+            print(f"[SUCCESS] Successfully updated deliverable {deliverable_id}")
+            print(f"[INFO] View deliverable at: https://microsoft.visualstudio.com/OS/_workitems/edit/{deliverable_id}")
+        
+        return success

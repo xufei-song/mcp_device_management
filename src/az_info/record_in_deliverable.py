@@ -116,6 +116,17 @@ def main():
             if deliverable_info:
                 print("\n[SUCCESS] Deliverable information retrieved!")
                 devops_client.print_deliverable_info(deliverable_info)
+                
+                # Step 4: Add comment to deliverable
+                print("\n[INFO] Adding test comment to deliverable...")
+                comment_success = devops_client.update_deliverable_with_comment(
+                    deliverable_id, 
+                    "this is test"
+                )
+                
+                if not comment_success:
+                    print("[WARNING] Failed to add comment, but deliverable query was successful")
+                
             else:
                 print(f"[ERROR] Could not retrieve deliverable {deliverable_id}")
                 print("Possible reasons:")
