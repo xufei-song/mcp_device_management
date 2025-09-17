@@ -13,7 +13,21 @@ if errorlevel 1 (
 
 echo [SUCCESS] Python version check passed
 
+REM Check Azure CLI installation
+echo [INFO] Checking Azure CLI installation...
+where az >nul 2>&1
+if errorlevel 1 (
+    echo [WARNING] Azure CLI not found. Please install Azure CLI first:
+    echo [INFO] Download from: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-windows
+    echo [INFO] Or install via winget: winget install -e --id Microsoft.AzureCLI
+    echo [INFO] Script will continue, but Azure functions may not work
+    echo.
+) else (
+    echo [SUCCESS] Azure CLI found
+)
+
 REM Create virtual environment
+echo [INFO] Starting virtual environment creation...
 if not exist "venv" (
     echo [INFO] Creating virtual environment...
     python -m venv venv
@@ -53,8 +67,6 @@ pip install jinja2
 pip install python-multipart
 pip install fastapi
 pip install uvicorn
-pip install openpyxl
-pip install pandas
 
 REM Install official MCP Python SDK
 echo [INFO] Installing official MCP Python SDK...
@@ -63,6 +75,11 @@ pip install mcp
 REM Install FastMCP library for MCP server development (optional)
 echo [INFO] Installing FastMCP library...
 pip install fastmcp
+
+REM Install Azure dependencies for az_info scripts
+echo [INFO] Installing Azure dependencies...
+pip install azure-devops
+pip install msrest
 
 REM Create necessary directories
 echo [INFO] Creating project directories...
