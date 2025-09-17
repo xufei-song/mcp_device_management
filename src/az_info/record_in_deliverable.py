@@ -8,8 +8,32 @@ and interact with Azure DevOps services.
 
 import sys
 import subprocess
+from pathlib import Path
+
+# 确保可以导入同目录下的模块
+current_dir = Path(__file__).parent
+sys.path.insert(0, str(current_dir))
+
 from az_util import az_login, get_azure_token, get_user_info, get_user_email
 from deliverable_handler import AzureDevOpsClient
+
+
+def az_logout():
+    """
+    执行Azure CLI登出
+    """
+    try:
+        from az_util import get_az_command
+        az_cmd = get_az_command()
+        result = subprocess.run([az_cmd, "logout"], capture_output=True, text=True, check=True)
+        print("[INFO] Azure logout successful")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"[WARNING] Azure logout failed: {e}")
+        return False
+    except Exception as e:
+        print(f"[ERROR] Exception during logout: {e}")
+        return False
 
 
 def check_azure_cli():
@@ -38,118 +62,92 @@ def check_azure_cli():
         return None
 
 
+def record_in_deliverable(comment_text):
+    """
+    在deliverable中记录comment
+    
+    Args:
+        comment_text (str): 要添加到deliverable discussion中的评论内容
+    
+    Returns:
+        bool: 成功返回True，失败返回False
+    """
+    azure_devops_client = None
+    login_successful = False
+    
+    try:
+        print("[INFO] Initializing Azure connection...")
+        
+        # Step 1: Check Azure CLI
+        az_path = check_azure_cli()
+        if not az_path:
+            print("[ERROR] Azure CLI not found!")
+            return False
+        
+        # Step 2: Login
+        login_result = az_login()
+        if login_result is None:
+            print("[ERROR] Azure login failed!")
+            return False
+        
+        login_successful = True  # 标记登录成功
+        
+        # Step 3: Get token
+        token = get_azure_token()
+        if not token:
+            print("[ERROR] Failed to get Azure token!")
+            return False
+        
+        # Step 4: Create client
+        azure_devops_client = AzureDevOpsClient(personal_access_token=token)
+        print("[SUCCESS] Azure connection initialized!")
+        
+        # 使用固定的deliverable ID
+        deliverable_id = 59278704
+        
+        print(f"[INFO] Recording comment in deliverable {deliverable_id}: {comment_text}")
+        
+        # 添加comment到deliverable
+        success = azure_devops_client.update_deliverable_with_comment(
+            deliverable_id, 
+            comment_text
+        )
+        
+        if success:
+            print(f"[SUCCESS] Comment recorded successfully: {comment_text}")
+            return True
+        else:
+            print(f"[ERROR] Failed to record comment: {comment_text}")
+            return False
+            
+    except Exception as e:
+        print(f"[ERROR] Exception while recording comment: {e}")
+        return False
+        
+    finally:
+        # 清理：如果登录成功，执行登出
+        if login_successful:
+            print("[INFO] Cleaning up: performing Azure logout...")
+            az_logout()
+
+
 def main():
     """
-    Main function to demonstrate Azure token retrieval
+    Main function for testing - demonstrates the record_in_deliverable interface
     """
     print("=" * 50)
-    print("Azure DevOps Token Retrieval Demo")
+    print("Azure DevOps Deliverable Recording Test")
     print("=" * 50)
     
-    # Step 0: Check if Azure CLI is available
-    print("\n[INFO] Checking Azure CLI availability...")
-    az_path = check_azure_cli()
-    if not az_path:
-        print("[ERROR] Azure CLI not found!")
-        print("Please install Azure CLI first:")
-        print("- Download from: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-windows")
-        print("- Or install via winget: winget install -e --id Microsoft.AzureCLI")
-        print("- Then restart your terminal/PowerShell session")
-        return 1
+    # Test the record_in_deliverable interface
+    test_comment = "this is test"
+    success = record_in_deliverable(test_comment)
     
-    print("[SUCCESS] Azure CLI found!")
-    
-    # Step 1: Attempt to login (this may prompt for interactive login)
-    print("\n[INFO] Attempting Azure CLI login...")
-    login_result = az_login()
-    
-    if login_result is None:
-        print("[ERROR] Login failed. Please ensure Azure CLI is installed and configured.")
-        return 1
-    
-    # Step 1.5: Get user information
-    print("\n[INFO] Retrieving user information...")
-    user_info = get_user_info()
-    user_email = get_user_email()
-    
-    if user_info:
-        print("\n[SUCCESS] User information retrieved!")
-        print("-" * 50)
-        print("User Name:", user_info.get('name', 'N/A'))
-        print("User Email:", user_email or 'N/A')
-        print("Tenant ID:", user_info.get('tenantId', 'N/A'))
-        if 'user' in user_info:
-            print("User Type:", user_info['user'].get('type', 'N/A'))
-        print("-" * 50)
-    else:
-        print("[WARNING] Could not retrieve user information, but login was successful.")
-    
-    # Step 2: Get the access token
-    print("\n[INFO] Retrieving Azure access token...")
-    token = get_azure_token()
-    
-    if token:
-        print("\n[SUCCESS] Access token retrieved successfully!")
-        print("-" * 50)
-        print("Token preview (first 20 characters):", token[:20] + "...")
-        print("Token length:", len(token))
-        print("-" * 50)
-        
-        # For debugging purposes, you can uncomment the line below to see the full token
-        # WARNING: Never log full tokens in production!
-        # print("Full token:", token)
-        
-        # Step 3: Query deliverable information
-        print("\n[INFO] Querying deliverable information...")
-        try:
-            # Create Azure DevOps client
-            devops_client = AzureDevOpsClient(
-                personal_access_token=token
-            )
-            
-            # Query specific deliverable
-            deliverable_id = 59278704
-            print(f"[INFO] Querying deliverable ID: {deliverable_id}")
-            
-            deliverable_info = devops_client.get_deliverable_info(deliverable_id)
-            
-            if deliverable_info:
-                print("\n[SUCCESS] Deliverable information retrieved!")
-                devops_client.print_deliverable_info(deliverable_info)
-                
-                # Step 4: Add comment to deliverable
-                print("\n[INFO] Adding test comment to deliverable...")
-                comment_success = devops_client.update_deliverable_with_comment(
-                    deliverable_id, 
-                    "this is test"
-                )
-                
-                if not comment_success:
-                    print("[WARNING] Failed to add comment, but deliverable query was successful")
-                
-            else:
-                print(f"[ERROR] Could not retrieve deliverable {deliverable_id}")
-                print("Possible reasons:")
-                print("1. Deliverable ID does not exist")
-                print("2. No permission to access this deliverable")
-                print("3. Deliverable is in a different project")
-                return 1
-            
-        except Exception as e:
-            print(f"[ERROR] Exception while querying deliverable: {e}")
-            print("This might be due to:")
-            print("1. Invalid token or expired session")
-            print("2. Network connectivity issues")
-            print("3. Azure DevOps service unavailable")
-            return 1
-        
+    if success:
+        print(f"\n[SUCCESS] Test completed successfully!")
         return 0
     else:
-        print("\n[ERROR] Failed to retrieve access token.")
-        print("Please check:")
-        print("1. Azure CLI is installed and logged in")
-        print("2. You have proper permissions")
-        print("3. The resource ID is correct")
+        print(f"\n[ERROR] Test failed!")
         return 1
 
 

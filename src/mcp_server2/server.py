@@ -41,6 +41,9 @@ from src.device.records_reader import (
     add_return_record
 )
 
+# 导入Azure DevOps集成模块
+from src.az_info.record_in_deliverable import record_in_deliverable
+
 # 配置日志
 logger = logging.getLogger(__name__)
 
@@ -857,6 +860,39 @@ async def _handle_borrow_device(arguments: dict[str, Any], ctx) -> list[types.Co
     if not asset_number or not borrower:
         return [types.TextContent(type="text", text="缺少必需参数: asset_number 或 borrower")]
     
+    # 首先记录到Azure DevOps deliverable
+    await ctx.session.send_log_message(
+        level="info",
+        data=f"正在记录设备借用到Azure DevOps: 资产编号 {asset_number}...",
+        logger="azure_devops_record",
+        related_request_id=ctx.request_id,
+    )
+    
+    try:
+        # 记录到Azure DevOps deliverable
+        comment_text = f"borrow {asset_number}"
+        devops_success = record_in_deliverable(comment_text)
+        
+        if not devops_success:
+            return [types.TextContent(
+                type="text", 
+                text=f"❌ Azure DevOps记录失败，无法继续借用操作\n资产编号: {asset_number}\n请检查Azure连接或联系管理员"
+            )]
+        
+        await ctx.session.send_log_message(
+            level="info",
+            data=f"Azure DevOps记录成功，继续执行设备借用操作...",
+            logger="azure_devops_record",
+            related_request_id=ctx.request_id,
+        )
+        
+    except Exception as e:
+        logger.error(f"Azure DevOps记录失败: {e}")
+        return [types.TextContent(
+            type="text", 
+            text=f"❌ Azure DevOps记录异常，无法继续借用操作\n错误: {str(e)}\n资产编号: {asset_number}"
+        )]
+
     await ctx.session.send_log_message(
         level="info",
         data=f"正在执行设备借用操作: 资产编号 {asset_number}, 借用者 {borrower}...",
@@ -917,6 +953,39 @@ async def _handle_return_device(arguments: dict[str, Any], ctx) -> list[types.Co
     if not asset_number or not borrower:
         return [types.TextContent(type="text", text="缺少必需参数: asset_number 或 borrower")]
     
+    # 首先记录到Azure DevOps deliverable
+    await ctx.session.send_log_message(
+        level="info",
+        data=f"正在记录设备归还到Azure DevOps: 资产编号 {asset_number}...",
+        logger="azure_devops_record",
+        related_request_id=ctx.request_id,
+    )
+    
+    try:
+        # 记录到Azure DevOps deliverable
+        comment_text = f"return {asset_number}"
+        devops_success = record_in_deliverable(comment_text)
+        
+        if not devops_success:
+            return [types.TextContent(
+                type="text", 
+                text=f"❌ Azure DevOps记录失败，无法继续归还操作\n资产编号: {asset_number}\n请检查Azure连接或联系管理员"
+            )]
+        
+        await ctx.session.send_log_message(
+            level="info",
+            data=f"Azure DevOps记录成功，继续执行设备归还操作...",
+            logger="azure_devops_record",
+            related_request_id=ctx.request_id,
+        )
+        
+    except Exception as e:
+        logger.error(f"Azure DevOps记录失败: {e}")
+        return [types.TextContent(
+            type="text", 
+            text=f"❌ Azure DevOps记录异常，无法继续归还操作\n错误: {str(e)}\n资产编号: {asset_number}"
+        )]
+
     await ctx.session.send_log_message(
         level="info",
         data=f"正在执行设备归还操作: 资产编号 {asset_number}, 归还者 {borrower}...",
