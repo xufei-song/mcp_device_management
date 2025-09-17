@@ -9,12 +9,9 @@
 | 3 | `find_device_by_asset` | `asset_lookup_guide` | `find_device_by_asset_number()` | 根据资产编号在所有设备表中查找设备 |
 | 4 | `borrow_device` | `device_borrow_workflow` | `borrow_device()` | 完整的设备借用流程（记录+状态更新） |
 | 5 | `return_device` | `device_return_workflow` | `return_device()` | 完整的设备归还流程（记录+状态更新） |
-| 6 | `add_borrow_record` | `device_borrow_workflow` | `add_borrow_record()` | 仅添加借用记录（不更新设备状态） |
-| 7 | `add_return_record` | `device_return_workflow` | `add_return_record()` | 仅添加归还记录（不更新设备状态） |
-| 8 | `get_windows_architectures` | `windows_architecture_guide` | `get_all_architectures()` | 获取所有Windows设备的芯片架构列表 |
-| 9 | `query_devices_by_architecture` | `windows_architecture_guide` | `query_devices_by_architecture()` | 根据芯片架构查询Windows设备 |
-| 10 | `get_device_records` | `device_records_analysis` | `read_records()` | 获取设备借用/归还记录 |
-| 11 | `send_notification_test` | ❌ 无对应提示 | SDK内置通知功能 | 发送测试通知流（演示SDK通知功能） |
+| 6 | `get_windows_architectures` | `windows_architecture_guide` | `get_all_architectures()` | 获取所有Windows设备的芯片架构列表 |
+| 7 | `query_devices_by_architecture` | `windows_architecture_guide` | `query_devices_by_architecture()` | 根据芯片架构查询Windows设备 |
+| 8 | `get_device_records` | `device_records_analysis` | `read_records()` | 获取设备借用/归还记录 |
 
 ## 🔧 工具分类
 
@@ -26,8 +23,6 @@
 ### 设备借用归还工具
 - **borrow_device**: 完整借用流程
 - **return_device**: 完整归还流程
-- **add_borrow_record**: 仅记录借用
-- **add_return_record**: 仅记录归还
 
 ### Windows特定工具
 - **get_windows_architectures**: 获取架构列表
@@ -35,7 +30,6 @@
 
 ### 记录和系统工具
 - **get_device_records**: 查询记录
-- **send_notification_test**: 通知测试
 
 ## 📝 提示分类
 
@@ -73,20 +67,17 @@
 - `find_device_by_asset_number()`: 根据资产编号查找设备
 - `borrow_device()`: 完整借用流程
 - `return_device()`: 完整归还流程
-- `add_borrow_record()`: 添加借用记录
-- `add_return_record()`: 添加归还记录
 
 ## 📊 覆盖情况统计
 
 ### 工具覆盖
-- **总工具数**: 11个
-- **有对应提示的工具**: 10个
-- **提示覆盖率**: 90.9% (10/11)
-- **无提示工具**: `send_notification_test` (系统级功能)
+- **总工具数**: 8个
+- **有对应提示的工具**: 8个
+- **提示覆盖率**: 100% (8/8)
 
 ### 提示覆盖
-- **总提示数**: 7个
-- **覆盖工具数**: 10个 (部分提示对应多个工具)
+- **总提示数**: 5个
+- **覆盖工具数**: 8个 (部分提示对应多个工具)
 - **功能完整性**: 100% (所有主要业务功能都有提示指导)
 
 ### 接口调用
@@ -94,7 +85,7 @@
 - **iOS设备**: `read_ios_devices()`
 - **Windows设备**: `read_windows_devices()`, `get_all_architectures()`, `query_devices_by_architecture()`
 - **其他设备**: `read_other_devices()`
-- **记录管理**: `read_records()`, `find_device_by_asset_number()`, `borrow_device()`, `return_device()`, `add_borrow_record()`, `add_return_record()`
+- **记录管理**: `read_records()`, `find_device_by_asset_number()`, `borrow_device()`, `return_device()`
 
 ## 🎯 工具使用场景
 
@@ -106,14 +97,10 @@
 ### 设备管理场景
 4. **借用设备**: `borrow_device` → `device_borrow_workflow`
 5. **归还设备**: `return_device` → `device_return_workflow`
-6. **记录管理**: `add_borrow_record`/`add_return_record` → 对应workflow
 
 ### 专项查询场景
-7. **Windows架构查询**: `get_windows_architectures`/`query_devices_by_architecture` → `windows_architecture_guide`
-8. **记录分析**: `get_device_records` → `device_records_analysis`
-
-### 系统功能场景
-9. **通知测试**: `send_notification_test` (无需提示，直接使用)
+6. **Windows架构查询**: `get_windows_architectures`/`query_devices_by_architecture` → `windows_architecture_guide`
+7. **记录分析**: `get_device_records` → `device_records_analysis`
 
 ## 💡 使用建议
 
@@ -124,8 +111,8 @@
 
 ---
 
-**最后更新**: 2025年9月17日  
-**版本**: v1.1 (删除不存在功能的提示后)  
-**工具数量**: 11个  
-**提示数量**: 7个  
-**接口函数**: 12个
+**最后更新**: 2025年1月17日  
+**版本**: v2.0 (删除非必要工具和功能)  
+**工具数量**: 8个  
+**提示数量**: 5个  
+**接口函数**: 10个
