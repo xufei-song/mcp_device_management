@@ -342,33 +342,83 @@ def main(
         
         return [
             types.Prompt(
-                name="device_test_plan",
-                description="生成设备测试计划模板",
+                name="device_info_query",
+                description="生成设备信息查询指导",
                 arguments=[
                     types.PromptArgument(
                         name="device_type",
-                        description="设备类型 (android/ios/windows)",
-                        required=True
-                    ),
-                    types.PromptArgument(
-                        name="test_scope", 
-                        description="测试范围 (功能测试/性能测试/兼容性测试)",
+                        description="要查询的设备类型 (android/ios/windows)",
                         required=False
                     )
                 ]
             ),
             types.Prompt(
-                name="bug_report_template",
-                description="生成Bug报告模板",
+                name="device_list_guide",
+                description="生成设备列表查询和筛选指导",
                 arguments=[
                     types.PromptArgument(
-                        name="device_id",
-                        description="出现问题的设备ID",
-                        required=True
+                        name="filter_type",
+                        description="筛选类型 (all/available/in_use)",
+                        required=False
+                    )
+                ]
+            ),
+            types.Prompt(
+                name="asset_lookup_guide",
+                description="生成资产编号查询指导",
+                arguments=[
+                    types.PromptArgument(
+                        name="asset_pattern",
+                        description="资产编号模式示例",
+                        required=False
+                    )
+                ]
+            ),
+            types.Prompt(
+                name="device_borrow_workflow",
+                description="生成设备借用流程指导",
+                arguments=[
+                    types.PromptArgument(
+                        name="borrower_type",
+                        description="借用者类型 (developer/tester/manager)",
+                        required=False
+                    )
+                ]
+            ),
+            types.Prompt(
+                name="device_return_workflow",
+                description="生成设备归还流程指导",
+                arguments=[
+                    types.PromptArgument(
+                        name="return_condition",
+                        description="归还条件 (normal/damaged/lost)",
+                        required=False
+                    )
+                ]
+            ),
+            types.Prompt(
+                name="windows_architecture_guide",
+                description="生成Windows设备架构查询指导",
+                arguments=[
+                    types.PromptArgument(
+                        name="target_arch",
+                        description="目标架构 (x64/arm64)",
+                        required=False
+                    )
+                ]
+            ),
+            types.Prompt(
+                name="device_records_analysis",
+                description="生成设备记录分析模板",
+                arguments=[
+                    types.PromptArgument(
+                        name="analysis_type",
+                        description="分析类型 (usage/trends/issues)",
+                        required=False
                     ),
                     types.PromptArgument(
-                        name="severity",
-                        description="问题严重程度 (低/中/高/紧急)",
+                        name="time_period",
+                        description="时间范围 (daily/weekly/monthly)",
                         required=False
                     )
                 ]
@@ -382,10 +432,20 @@ def main(
         logger.info(f"[SDK] 获取提示: {name}, 参数: {args}")
         
         try:
-            if name == "device_test_plan":
-                return await _handle_device_test_plan_prompt(args)
-            elif name == "bug_report_template":
-                return await _handle_bug_report_template_prompt(args)
+            if name == "device_info_query":
+                return await _handle_device_info_query_prompt(args)
+            elif name == "device_list_guide":
+                return await _handle_device_list_guide_prompt(args)
+            elif name == "asset_lookup_guide":
+                return await _handle_asset_lookup_guide_prompt(args)
+            elif name == "device_borrow_workflow":
+                return await _handle_device_borrow_workflow_prompt(args)
+            elif name == "device_return_workflow":
+                return await _handle_device_return_workflow_prompt(args)
+            elif name == "windows_architecture_guide":
+                return await _handle_windows_architecture_guide_prompt(args)
+            elif name == "device_records_analysis":
+                return await _handle_device_records_analysis_prompt(args)
             else:
                 return types.GetPromptResult(
                     description=f"未知提示: {name}",
@@ -839,135 +899,6 @@ async def _handle_get_device_records(arguments: dict[str, Any], ctx) -> list[typ
 
 
 # 提示实现函数
-async def _handle_device_test_plan_prompt(arguments: dict[str, str]) -> types.GetPromptResult:
-    """处理设备测试计划提示"""
-    device_type = arguments.get("device_type", "通用")
-    test_scope = arguments.get("test_scope", "功能测试")
-    
-    prompt_content = f"""
-# {device_type.upper()} 设备测试计划 (SDK版本)
-
-## 测试范围: {test_scope}
-
-## 测试环境
-- 设备类型: {device_type}
-- 测试时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-- 生成方式: 官方MCP SDK StreamableHTTP
-
-## 测试用例
-
-### 1. 基础功能测试 (SDK增强)
-- [ ] 设备连接测试
-- [ ] 设备信息获取
-- [ ] 屏幕截图功能
-- [ ] 应用安装/卸载
-- [ ] 实时通知测试 ✨
-
-### 2. 性能测试 (SDK监控)
-- [ ] CPU使用率监控
-- [ ] 内存使用率监控
-- [ ] 网络连接测试
-- [ ] 电池消耗测试
-- [ ] 实时性能数据流 ✨
-
-### 3. 兼容性测试
-- [ ] 不同版本系统测试
-- [ ] 不同分辨率适配
-- [ ] 多设备并发测试
-- [ ] 断点续传功能测试 ✨
-
-## 预期结果
-所有测试用例都应该通过，设备应该保持稳定运行状态。
-
-## 注意事项
-- 测试前确保设备已正确连接
-- 记录所有异常情况和错误日志
-- 测试完成后生成详细报告
-- 使用SDK的实时通知功能监控测试进度 ✨
-
-## SDK特性
-- ✅ 实时通知和进度报告
-- ✅ 断点续传支持
-- ✅ 结构化错误处理
-- ✅ 会话管理
-"""
-    
-    return types.GetPromptResult(
-        description="设备测试计划 (SDK版本)",
-        messages=[
-            types.PromptMessage(
-                role="user",
-                content=types.TextContent(type="text", text=prompt_content)
-            )
-        ]
-    )
-
-
-async def _handle_bug_report_template_prompt(arguments: dict[str, str]) -> types.GetPromptResult:
-    """处理Bug报告模板提示"""
-    device_id = arguments.get("device_id", "未指定")
-    severity = arguments.get("severity", "中")
-    
-    prompt_content = f"""
-# Bug报告 (SDK版本)
-
-## 基本信息
-- 报告时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-- 设备ID: {device_id}
-- 严重程度: {severity}
-- 报告人: [请填写]
-- 生成方式: 官方MCP SDK StreamableHTTP ✨
-
-## 问题描述
-[请详细描述遇到的问题]
-
-## 复现步骤
-1. [步骤1]
-2. [步骤2]
-3. [步骤3]
-
-## 预期结果
-[描述期望的正确行为]
-
-## 实际结果
-[描述实际发生的错误行为]
-
-## 环境信息
-- 设备型号: [请填写]
-- 系统版本: [请填写]
-- 应用版本: [请填写]
-- MCP传输: StreamableHTTP ✨
-
-## 附加信息
-- 错误日志: [如有请附上]
-- 截图/视频: [如有请附上]
-- 实时通知日志: [SDK自动记录] ✨
-- 其他相关信息: [请补充]
-
-## 影响范围
-[描述此问题可能影响的功能或用户]
-
-## SDK诊断信息 ✨
-- 会话ID: [自动记录]
-- 请求ID: [自动记录]  
-- 事件流状态: [自动记录]
-- 断点续传支持: 已启用
-
-## 解决方案建议
-[如有解决方案建议请填写]
-"""
-    
-    return types.GetPromptResult(
-        description="Bug报告模板 (SDK版本)",
-        messages=[
-            types.PromptMessage(
-                role="user",
-                content=types.TextContent(type="text", text=prompt_content)
-            )
-        ]
-    )
-
-
 async def _handle_find_device_by_asset(arguments: dict[str, Any], ctx) -> list[types.ContentBlock]:
     """处理根据资产编号查找设备"""
     asset_number = arguments.get("asset_number")
@@ -1242,6 +1173,762 @@ async def _handle_add_return_record(arguments: dict[str, Any], ctx) -> list[type
             type="text", 
             text=f"添加归还记录失败: {str(e)}\n请检查参数或联系管理员"
         )]
+
+
+async def _handle_device_info_query_prompt(arguments: dict[str, str]) -> types.GetPromptResult:
+    """处理设备信息查询指导提示"""
+    device_type = arguments.get("device_type", "通用")
+    
+    prompt_content = f"""
+# 设备信息查询指导
+
+## 查询设备类型: {device_type}
+
+## 查询步骤
+
+### 1. 基础查询
+使用 `get_device_info` 工具查询设备详细信息：
+- **设备ID**: 设备名称或序列号
+- **设备类型**: android, ios, windows
+
+### 2. 设备类型特点
+
+#### Android设备查询
+- 支持设备名称查询（如：Pixel 6）
+- 支持序列号查询
+- 包含设备类型信息（手机/平板）
+
+#### iOS设备查询  
+- 支持设备名称查询（如：iPhone 14）
+- 支持序列号查询
+- 系统版本信息详细
+
+#### Windows设备查询
+- 支持设备名称查询（如：Surface Pro）
+- 支持序列号查询
+- 包含芯片架构信息（x64/arm64）
+
+### 3. 查询示例
+
+```
+工具调用示例:
+get_device_info(device_id="设备名称或序列号", device_type="android")
+```
+
+### 4. 可查询信息
+- 设备名称和序列号
+- 设备状态（可用/正在使用/设备异常）
+- 当前借用者信息
+- 所属manager
+- 资产编号
+- SKU和品牌信息
+- 创建日期
+
+### 5. 故障排除
+- 确保设备ID正确
+- 检查设备类型匹配
+- 使用 list_devices 查看所有可用设备
+
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+    
+    return types.GetPromptResult(
+        description="设备信息查询指导",
+        messages=[
+            types.PromptMessage(
+                role="user",
+                content=types.TextContent(type="text", text=prompt_content)
+            )
+        ]
+    )
+
+
+async def _handle_device_list_guide_prompt(arguments: dict[str, str]) -> types.GetPromptResult:
+    """处理设备列表查询指导提示"""
+    filter_type = arguments.get("filter_type", "all")
+    
+    prompt_content = f"""
+# 设备列表查询和筛选指导
+
+## 当前筛选类型: {filter_type}
+
+## 查询方式
+
+### 1. 基础列表查询
+使用 `list_devices` 工具获取设备列表：
+
+```
+list_devices(device_type="all", status="all")
+```
+
+### 2. 设备类型筛选
+
+#### 支持的设备类型
+- **android**: Android手机和平板
+- **ios**: iPhone和iPad设备  
+- **windows**: Windows PC和Surface
+- **other**: 其他类型设备
+- **all**: 所有设备类型
+
+### 3. 状态筛选
+
+#### 设备状态类型
+- **online**: 可用设备（设备状态="可用"）
+- **offline**: 其他状态设备（正在使用/设备异常等）
+- **all**: 所有状态设备
+
+### 4. 常用查询场景
+
+#### 查找可用设备
+```
+list_devices(device_type="android", status="online")
+```
+
+#### 查看使用中设备
+```
+list_devices(device_type="all", status="offline")
+```
+
+#### 特定平台设备
+```
+list_devices(device_type="ios", status="all")
+```
+
+### 5. 结果信息
+每个设备显示：
+- 设备名称和序列号
+- 当前状态
+- 借用者信息
+- 资产编号
+- 设备规格信息
+
+### 6. 统计信息
+查询结果包含：
+- 总设备数量
+- 可用设备数量
+- 使用中设备数量
+- 按类型分组统计
+
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+    
+    return types.GetPromptResult(
+        description="设备列表查询指导",
+        messages=[
+            types.PromptMessage(
+                role="user",
+                content=types.TextContent(type="text", text=prompt_content)
+            )
+        ]
+    )
+
+
+async def _handle_asset_lookup_guide_prompt(arguments: dict[str, str]) -> types.GetPromptResult:
+    """处理资产编号查询指导提示"""
+    asset_pattern = arguments.get("asset_pattern", "18294886")
+    
+    prompt_content = f"""
+# 资产编号查询指导
+
+## 示例资产编号: {asset_pattern}
+
+## 查询方式
+
+### 1. 精确查询
+使用 `find_device_by_asset` 工具通过资产编号查找设备：
+
+```
+find_device_by_asset(asset_number="{asset_pattern}")
+```
+
+### 2. 资产编号特点
+
+#### 编号格式
+- 通常为8位数字（如：18294886）
+- 每台设备都有唯一的资产编号
+- 在设备标签上标识
+
+#### 查询范围
+- 自动搜索所有设备类型
+- Android设备表
+- iOS设备表  
+- Windows设备表
+- 其他设备表
+
+### 3. 查询结果
+
+#### 成功查询显示
+- 🏷️ 资产编号
+- 📱 设备名称
+- 🔧 设备类型
+- 📋 设备状态
+- 👤 当前借用者
+- 🖥️ 系统信息
+- 🏭 品牌信息
+
+#### 查询失败处理
+- 检查资产编号是否正确
+- 确认设备是否已录入系统
+- 使用 list_devices 查看所有设备
+
+### 4. 资产编号作用
+
+#### 设备管理
+- 唯一标识设备
+- 借用和归还记录
+- 设备状态追踪
+- 库存管理
+
+#### 相关操作
+- 设备借用：borrow_device
+- 设备归还：return_device
+- 状态查询：get_device_info
+
+### 5. 常见问题
+
+#### 找不到设备
+- 确认资产编号无误
+- 检查是否为8位数字
+- 联系设备管理员确认
+
+#### 多个结果
+- 系统确保唯一性
+- 每个资产编号对应一台设备
+
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+    
+    return types.GetPromptResult(
+        description="资产编号查询指导",
+        messages=[
+            types.PromptMessage(
+                role="user",
+                content=types.TextContent(type="text", text=prompt_content)
+            )
+        ]
+    )
+
+
+async def _handle_device_borrow_workflow_prompt(arguments: dict[str, str]) -> types.GetPromptResult:
+    """处理设备借用流程指导提示"""
+    borrower_type = arguments.get("borrower_type", "developer")
+    
+    prompt_content = f"""
+# 设备借用流程指导
+
+## 借用者类型: {borrower_type}
+
+## 完整借用流程
+
+### 1. 准备工作
+
+#### 确认设备信息
+- 使用 `find_device_by_asset` 查找目标设备
+- 确认设备状态为"可用"
+- 记录资产编号
+
+#### 借用者信息
+- 确认借用者姓名
+- 准备借用原因说明
+
+### 2. 执行借用
+
+#### 使用 borrow_device 工具
+```
+borrow_device(
+    asset_number="资产编号",
+    borrower="借用者姓名", 
+    reason="借用原因"
+)
+```
+
+#### 流程说明
+此工具执行完整借用流程：
+1. ✅ 添加借用记录到records.csv
+2. ✅ 更新设备状态为"正在使用"
+3. ✅ 设置设备借用者信息
+
+### 3. 借用场景
+
+#### 开发人员借用
+- 用途：应用开发测试
+- 建议时长：1-2周
+- 常见设备：Android/iOS测试机
+
+#### 测试人员借用  
+- 用途：功能验证测试
+- 建议时长：3-5天
+- 常见设备：各型号真机
+
+#### 管理人员借用
+- 用途：演示或临时使用
+- 建议时长：1-3天
+- 常见设备：高端设备
+
+### 4. 注意事项
+
+#### 借用前检查
+- 设备是否可用
+- 设备是否有已知问题
+- 预计使用时长
+
+#### 借用期间
+- 妥善保管设备
+- 及时报告设备问题
+- 按时归还设备
+
+#### 借用记录
+- 系统自动记录借用时间
+- 记录借用原因
+- 更新设备状态
+
+### 5. 相关工具
+
+#### 仅记录操作
+如果只需要添加借用记录而不更新设备状态：
+```
+add_borrow_record(asset_number, borrower, reason)
+```
+
+#### 查询借用记录
+```
+get_device_records(record_type="借用")
+```
+
+### 6. 故障排除
+
+#### 借用失败原因
+- 资产编号不存在
+- 设备已被借用
+- 设备状态异常
+- 参数格式错误
+
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+    
+    return types.GetPromptResult(
+        description="设备借用流程指导",
+        messages=[
+            types.PromptMessage(
+                role="user",
+                content=types.TextContent(type="text", text=prompt_content)
+            )
+        ]
+    )
+
+
+async def _handle_device_return_workflow_prompt(arguments: dict[str, str]) -> types.GetPromptResult:
+    """处理设备归还流程指导提示"""
+    return_condition = arguments.get("return_condition", "normal")
+    
+    prompt_content = f"""
+# 设备归还流程指导
+
+## 归还条件: {return_condition}
+
+## 完整归还流程
+
+### 1. 归还准备
+
+#### 检查设备状态
+- 确认设备功能正常
+- 清理个人数据和应用
+- 恢复设备初始设置
+
+#### 归还信息准备
+- 确认资产编号
+- 准备归还原因说明
+- 确认归还者身份
+
+### 2. 执行归还
+
+#### 使用 return_device 工具
+```
+return_device(
+    asset_number="资产编号",
+    borrower="归还者姓名",
+    reason="归还原因"
+)
+```
+
+#### 流程说明
+此工具执行完整归还流程：
+1. ✅ 添加归还记录到records.csv
+2. ✅ 更新设备状态为"可用"
+3. ✅ 清空设备借用者信息
+
+### 3. 归还场景
+
+#### 正常归还 (normal)
+- 设备功能完好
+- 使用完毕主动归还
+- 按计划时间归还
+
+#### 损坏归还 (damaged)
+- 设备有功能问题
+- 需要维修处理
+- 详细说明损坏情况
+
+#### 丢失处理 (lost)
+- 设备遗失情况
+- 需要特殊处理流程
+- 联系设备管理员
+
+### 4. 归还检查清单
+
+#### 设备清理
+- [ ] 删除个人账号信息
+- [ ] 卸载测试应用
+- [ ] 清理测试数据
+- [ ] 恢复系统设置
+
+#### 硬件检查
+- [ ] 屏幕显示正常
+- [ ] 按键功能正常
+- [ ] 充电接口正常
+- [ ] 网络连接正常
+
+#### 配件检查
+- [ ] 充电器
+- [ ] 数据线
+- [ ] 保护套/膜
+- [ ] 其他配件
+
+### 5. 归还说明
+
+#### 归还原因示例
+- "测试完成"
+- "项目结束"
+- "功能验证完毕"
+- "临时使用结束"
+
+#### 特殊情况说明
+- 如有设备问题，详细描述
+- 如有配件缺失，及时说明
+- 如需继续使用，重新申请
+
+### 6. 相关工具
+
+#### 仅记录操作
+如果只需要添加归还记录而不更新设备状态：
+```
+add_return_record(asset_number, borrower, reason)
+```
+
+#### 查询归还记录
+```
+get_device_records(record_type="归还")
+```
+
+### 7. 故障排除
+
+#### 归还失败原因
+- 资产编号不存在
+- 设备未被借用
+- 归还者与借用者不匹配
+- 参数格式错误
+
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+    
+    return types.GetPromptResult(
+        description="设备归还流程指导",
+        messages=[
+            types.PromptMessage(
+                role="user",
+                content=types.TextContent(type="text", text=prompt_content)
+            )
+        ]
+    )
+
+
+async def _handle_windows_architecture_guide_prompt(arguments: dict[str, str]) -> types.GetPromptResult:
+    """处理Windows设备架构查询指导提示"""
+    target_arch = arguments.get("target_arch", "x64")
+    
+    prompt_content = f"""
+# Windows设备架构查询指导
+
+## 目标架构: {target_arch}
+
+## 架构查询功能
+
+### 1. 获取所有架构
+使用 `get_windows_architectures` 工具：
+```
+get_windows_architectures()
+```
+
+#### 返回结果
+- 列出所有可用的芯片架构
+- 按字母顺序排序
+- 显示架构统计信息
+
+### 2. 按架构查询设备
+使用 `query_devices_by_architecture` 工具：
+```
+query_devices_by_architecture(architecture="{target_arch}")
+```
+
+#### 查询范围
+- 仅限Windows设备
+- 精确匹配架构名称
+- 返回详细设备信息
+
+### 3. 支持的架构类型
+
+#### x64架构
+- 64位Intel/AMD处理器
+- 兼容性最广
+- 性能优秀
+- 常见于台式机和笔记本
+
+#### arm64架构  
+- 64位ARM处理器
+- 低功耗设计
+- 续航优秀
+- 常见于Surface Pro X等
+
+### 4. 架构查询应用场景
+
+#### 开发测试
+- 应用兼容性测试
+- 性能对比测试
+- 架构特定功能验证
+
+#### 设备选择
+- 根据项目需求选择合适架构
+- 考虑应用兼容性要求
+- 评估性能需求
+
+### 5. 查询结果信息
+
+#### 设备详情
+- 设备名称和型号
+- 芯片架构信息
+- 设备状态
+- 借用者信息
+- 资产编号
+
+#### 统计信息
+- 总设备数量
+- 可用设备数量
+- 使用中设备数量
+- 架构分布情况
+
+### 6. 架构选择建议
+
+#### x64架构适用
+- 通用应用开发
+- 高性能计算需求
+- 兼容性测试
+- 企业级应用
+
+#### arm64架构适用
+- 移动应用适配
+- 低功耗测试
+- 续航性能测试
+- 新架构兼容性
+
+### 7. 相关操作
+
+#### 设备借用
+找到合适架构设备后：
+```
+borrow_device(asset_number, borrower, reason)
+```
+
+#### 设备信息
+获取设备详细信息：
+```
+get_device_info(device_id, device_type="windows")
+```
+
+### 8. 注意事项
+
+#### 架构兼容性
+- 确认应用支持目标架构
+- 注意架构特定的限制
+- 考虑性能差异
+
+#### 设备可用性
+- 优先选择可用设备
+- 考虑设备配置差异
+- 确认设备状态正常
+
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+    
+    return types.GetPromptResult(
+        description="Windows设备架构查询指导",
+        messages=[
+            types.PromptMessage(
+                role="user",
+                content=types.TextContent(type="text", text=prompt_content)
+            )
+        ]
+    )
+
+
+async def _handle_device_records_analysis_prompt(arguments: dict[str, str]) -> types.GetPromptResult:
+    """处理设备记录分析模板提示"""
+    analysis_type = arguments.get("analysis_type", "usage")
+    time_period = arguments.get("time_period", "weekly")
+    
+    prompt_content = f"""
+# 设备记录分析模板
+
+## 分析类型: {analysis_type}
+## 时间范围: {time_period}
+
+## 数据获取
+
+### 1. 获取记录数据
+使用 `get_device_records` 工具：
+```
+get_device_records(record_type="all")
+```
+
+#### 记录类型
+- **all**: 所有借用和归还记录
+- **借用**: 仅借用记录
+- **归还**: 仅归还记录
+
+### 2. 分析维度
+
+#### 使用分析 (usage)
+- 设备使用频率统计
+- 热门设备排行
+- 使用时长分析
+- 设备利用率计算
+
+#### 趋势分析 (trends)
+- 借用归还趋势
+- 季节性使用模式
+- 设备类型偏好变化
+- 用户行为模式
+
+#### 问题分析 (issues)
+- 设备故障记录
+- 异常使用模式
+- 逾期未归还统计
+- 设备维护需求
+
+### 3. 分析指标
+
+#### 基础指标
+- 总借用次数
+- 总归还次数
+- 平均使用时长
+- 设备周转率
+
+#### 设备维度
+- 设备类型使用分布
+- 热门设备TOP10
+- 设备故障率
+- 设备空闲率
+
+#### 用户维度
+- 活跃用户统计
+- 用户使用偏好
+- 部门使用情况
+- 使用时长分布
+
+### 4. 时间周期分析
+
+#### 每日分析 (daily)
+- 当日借用归还情况
+- 实时设备状态
+- 当日异常记录
+
+#### 每周分析 (weekly)
+- 周度使用趋势
+- 工作日vs周末使用
+- 周度设备周转
+
+#### 每月分析 (monthly)
+- 月度使用报告
+- 设备采购建议
+- 用户满意度评估
+
+### 5. 分析报告模板
+
+#### 执行摘要
+- 关键指标总结
+- 主要发现
+- 改进建议
+
+#### 详细分析
+- 数据图表展示
+- 趋势变化说明
+- 异常情况分析
+
+#### 行动建议
+- 设备采购建议
+- 流程优化建议
+- 用户培训需求
+
+### 6. 常用分析查询
+
+#### 借用频率分析
+```
+# 获取所有借用记录
+get_device_records(record_type="借用")
+
+# 分析最常借用的设备
+# 统计借用频次
+# 计算平均使用时长
+```
+
+#### 设备利用率分析
+```
+# 获取设备列表
+list_devices(device_type="all", status="all")
+
+# 获取使用记录
+get_device_records(record_type="all")
+
+# 计算利用率 = 使用时间 / 总时间
+```
+
+### 7. 数据可视化建议
+
+#### 图表类型
+- 柱状图：设备类型使用分布
+- 折线图：使用趋势变化
+- 饼图：设备状态分布
+- 热力图：使用时间分布
+
+#### 关键指标仪表板
+- 实时可用设备数
+- 当前借用率
+- 平均使用时长
+- 设备故障率
+
+### 8. 改进建议输出
+
+#### 设备管理
+- 增减设备建议
+- 设备配置优化
+- 维护计划调整
+
+#### 流程优化
+- 借用流程改进
+- 归还提醒机制
+- 用户体验提升
+
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+    
+    return types.GetPromptResult(
+        description="设备记录分析模板",
+        messages=[
+            types.PromptMessage(
+                role="user",
+                content=types.TextContent(type="text", text=prompt_content)
+            )
+        ]
+    )
 
 
 if __name__ == "__main__":
