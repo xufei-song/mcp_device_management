@@ -9,6 +9,7 @@ and interact with Azure DevOps services.
 import sys
 import subprocess
 from az_util import az_login, get_azure_token, get_user_info, get_user_email
+from deliverable_handler import AzureDevOpsClient
 
 
 def check_azure_cli():
@@ -97,6 +98,39 @@ def main():
         # For debugging purposes, you can uncomment the line below to see the full token
         # WARNING: Never log full tokens in production!
         # print("Full token:", token)
+        
+        # Step 3: Query deliverable information
+        print("\n[INFO] Querying deliverable information...")
+        try:
+            # Create Azure DevOps client
+            devops_client = AzureDevOpsClient(
+                personal_access_token=token
+            )
+            
+            # Query specific deliverable
+            deliverable_id = 59278704
+            print(f"[INFO] Querying deliverable ID: {deliverable_id}")
+            
+            deliverable_info = devops_client.get_deliverable_info(deliverable_id)
+            
+            if deliverable_info:
+                print("\n[SUCCESS] Deliverable information retrieved!")
+                devops_client.print_deliverable_info(deliverable_info)
+            else:
+                print(f"[ERROR] Could not retrieve deliverable {deliverable_id}")
+                print("Possible reasons:")
+                print("1. Deliverable ID does not exist")
+                print("2. No permission to access this deliverable")
+                print("3. Deliverable is in a different project")
+                return 1
+            
+        except Exception as e:
+            print(f"[ERROR] Exception while querying deliverable: {e}")
+            print("This might be due to:")
+            print("1. Invalid token or expired session")
+            print("2. Network connectivity issues")
+            print("3. Azure DevOps service unavailable")
+            return 1
         
         return 0
     else:

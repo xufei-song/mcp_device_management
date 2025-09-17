@@ -67,6 +67,7 @@ pip install jinja2
 pip install python-multipart
 pip install fastapi
 pip install uvicorn
+pip install azure-devops msrest
 
 REM Install official MCP Python SDK
 echo [INFO] Installing official MCP Python SDK...
